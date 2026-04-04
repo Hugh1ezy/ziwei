@@ -26,29 +26,26 @@
 
 ---
 
-## 三、每次更新同步流程
+## 三、每次更新同步流程（由 Claude 自动执行，用户无需操作）
 
-修改本地文件后，执行以下 git 命令推送到 GitHub Pages：
+> **每次完成任何改动后，Claude 必须立即自动执行以下步骤，不等待用户指令。**
 
 ```bash
-# 1. 查看变更
-git status
-git diff
+# Claude 执行：暂存改动的文件（不用 git add . 或 git add books/）
+git add ziwei.html                                          # 如有修改
+git add rules/rules_paiping.md rules/rules_jiedu.md        # 如有修改
+git add memory_log.md instructions.md                      # 如有修改
 
-# 2. 暂存变更（选择要提交的文件，不要 git add .）
-git add ziwei.html
-git add rules/rules_paiping.md rules/rules_jiedu.md
-git add memory_log.md
+# 提交（含 Co-Author 标注）
+git commit -m "描述本次改动"
 
-# 3. 提交
-git commit -m "简明描述本次改动"
-
-# 4. 推送（GitHub Pages 自动部署，约1分钟生效）
+# 推送 → GitHub Pages 约1分钟自动更新
 git push
 ```
 
-⚠️ 每次提交前必须更新 `memory_log.md`。
-⚠️ 不要 `git add .` 或 `git add books/`（PDF 不入库）。
+⚠️ 每次 push 前必须已更新 `memory_log.md`。
+⚠️ 绝不 `git add books/`（PDF 不入库）。
+⚠️ push 成功后告知用户网址：https://hugh1ezy.github.io/ziwei/
 
 ---
 
