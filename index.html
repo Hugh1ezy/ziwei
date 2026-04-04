@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>紫微斗数排盘</title>
+<!-- lunar-javascript: 农历转换开源库 -->
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js"></script>
+<!-- Rule2 解盘数据（来源：《紫微斗数精成》大德山人著，第八章/第九章） -->
+<script src="rules/rule2_data.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Microsoft YaHei', '微软雅黑', SimSun, serif;
+  background: #ffffff;
+  color: #222222;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #8b1a1a;
+  margin-bottom: 18px;
+  letter-spacing: 4px;
+}
+.input-section {
+  max-width: 600px;
+  margin: 0 auto 24px;
+  background: #fdf6ee;
+  border: 1px solid #c8a060;
+  border-radius: 8px;
+  padding: 18px 24px;
+}
+.input-section h2 {
+  font-size: 1.1em;
+  color: #8b1a1a;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #c8a060;
+  padding-bottom: 6px;
+}
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.form-row label {
+  min-width: 80px;
+  color: #5a3800;
+  font-size: 0.95em;
+}
+.form-row input, .form-row select {
+  background: #ffffff;
+  border: 1px solid #c8a060;
+  color: #222222;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+.form-row input[type="date"] { width: 160px; }
+.form-row select { min-width: 120px; }
+button#calcBtn {
+  display: block;
+  margin: 14px auto 0;
+  padding: 8px 36px;
+  background: #8b1a1a;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: background 0.2s;
+}
+button#calcBtn:hover { background: #b22222; }
+
+/* ---- 命盘主体 ---- */
+#chart-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: none;
+}
+.chart-title {
+  text-align: center;
+  color: #5a3800;
+  font-size: 1.1em;
+  margin-bottom: 10px;
+}
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 2px;
+  background: #c8a060;
+  border: 2px solid #8b6914;
+  position: relative;
+}
+.palace {
+  background: #fffef8;
+  border: 1px solid #ddc880;
+  padding: 8px 6px 6px;
+  min-height: 120px;
+  position: relative;
+}
+.palace.center {
+  background: #fdf6ee;
+  border: 1px solid #c8a060;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.palace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid #ddc880;
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+.palace-name {
+  font-size: 0.8em;
+  color: #8b1a1a;
+}
+.palace-branch {
+  font-size: 1em;
+  color: #222222;
+  font-weight: bold;
+}
+.palace-stem {
+  font-size: 0.8em;
+  color: #5a3800;
+}
+.stars-main {
+  font-size: 0.88em;
+  color: #1a1a1a;
+  line-height: 1.6;
+}
+.stars-aux {
+  font-size: 0.75em;
+  color: #7a6040;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.star-hua-lu  { color: #007700; font-weight: bold; }
+.star-hua-quan { color: #cc5500; font-weight: bold; }
+.star-hua-ke  { color: #0055aa; font-weight: bold; }
+.star-hua-ji  { color: #cc0000; font-weight: bold; }
+.tag-ming { color: #cc5500; font-size: 0.75em; }
+.tag-shen { color: #0055aa; font-size: 0.75em; }
+
+/* 大限标签 */
+.daxian-label {
+  font-size: 0.7em;
+  color: #0055bb;
+  margin-top: 4px;
+  cursor: pointer;
+  line-height: 1.4;
+  user-select: none;
+}
+.daxian-label:hover { text-decoration: underline; }
+.palace.daxian-active { background: #eef4ff !important; outline: 2px solid #0055bb; outline-offset: -2px; }
+.palace.liunian-active { outline: 2px solid #cc5500; outline-offset: -2px; }
+
+/* 大限/流年面板 */
+#limit-panel {
+  max-width: 900px;
+  margin: 10px auto 0;
+  padding: 12px 16px;
+  background: #fdf6ee;
+  border: 1px solid #c8a060;
+  border-radius: 6px;
+  display: none;
+}
+#limit-panel h3 { font-size: 0.95em; color: #8b1a1a; margin-bottom: 8px; }
+.limit-years { display: flex; flex-wrap: wrap; gap: 6px; }
+.liunian-btn {
+  padding: 4px 10px;
+  border: 1px solid #c8a060;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82em;
+  color: #5a3800;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.liunian-btn:hover { background: #fdf0d8; }
+.liunian-btn.active { background: #cc5500; color: #fff; border-color: #cc5500; }
+
+/* 流月按钮 */
+.liuyue-btn {
+  padding: 3px 8px;
+  border: 1px solid #9966cc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.78em;
+  color: #5a1a8b;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.liuyue-btn:hover { background: #f5eeff; }
+.liuyue-btn.active { background: #6600cc; color: #fff; border-color: #6600cc; }
+.palace.liuyue-active { outline: 2px solid #6600cc; outline-offset: -2px; }
+#liunian-detail h3 { font-size: 0.88em; color: #5a1a8b; margin-bottom: 6px; }
+
+/* 流日按钮 */
+.liuri-btn {
+  padding: 3px 6px;
+  border: 1px solid #008080;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.72em;
+  color: #004d4d;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.liuri-btn:hover { background: #e0f5f5; }
+.liuri-btn.active { background: #006666; color: #fff; border-color: #006666; }
+.palace.liuri-active { outline: 2px solid #008080; outline-offset: -2px; }
+
+/* 流时按钮 */
+.liushi-btn {
+  padding: 3px 6px;
+  border: 1px solid #990066;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.72em;
+  color: #660044;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.liushi-btn:hover { background: #ffe0f0; }
+.liushi-btn.active { background: #770055; color: #fff; border-color: #770055; }
+.palace.liushi-active { outline: 2px solid #990066; outline-offset: -2px; }
+#limit-panel .sep { border: none; border-top: 1px dashed #ddc880; margin: 10px 0 8px; }
+
+/* 中心宫 */
+.center-info {
+  text-align: center;
+  line-height: 1.8;
+}
+.center-info .ci-row { font-size: 0.85em; color: #5a3800; }
+.center-info .ci-val { color: #8b1a1a; font-weight: bold; }
+
+/* 错误提示 */
+#error-msg {
+  color: #cc0000;
+  text-align: center;
+  margin: 10px 0;
+  display: none;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .palace { min-height: 90px; padding: 5px 4px; }
+  .stars-main { font-size: 0.78em; }
+  .stars-aux { font-size: 0.68em; }
+}
+
+/* ---- Rule2 解读面板 ---- */
+#rule2-btn {
+  display: none;
+  margin: 14px auto 0;
+  padding: 8px 28px;
+  background: #2d5016;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.95em;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: background 0.2s;
+}
+#rule2-btn:hover { background: #3d6d1e; }
+#rule2-panel {
+  display: none;
+  max-width: 900px;
+  margin: 10px auto 0;
+  background: #fffef5;
+  border: 1px solid #c8a060;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+#rule2-panel h3 {
+  color: #2d5016;
+  font-size: 1em;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #c8a060;
+  padding-bottom: 6px;
+  letter-spacing: 2px;
+}
+.r2-palace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.r2-tab {
+  padding: 4px 10px;
+  border: 1px solid #c8a060;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82em;
+  color: #5a3800;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.r2-tab:hover { background: #fdf0d8; }
+.r2-tab.active { background: #2d5016; color: #fff; border-color: #2d5016; }
+#r2-content {
+  font-size: 0.88em;
+  line-height: 1.8;
+  color: #2a2a2a;
+}
+.r2-section {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #e8d8b0;
+  border-radius: 6px;
+}
+.r2-section-title {
+  font-weight: bold;
+  color: #8b1a1a;
+  margin-bottom: 6px;
+  font-size: 0.92em;
+}
+.r2-star-label {
+  color: #5a3800;
+  font-weight: bold;
+}
+.r2-text {
+  color: #333;
+  margin-top: 4px;
+}
+.r2-no-data {
+  color: #999;
+  font-style: italic;
+  font-size: 0.85em;
+}
+</style>
+</head>
+<body>
+
+<h1>紫微斗数排盘</h1>
+
+<div class="input-section">
+  <h2>出生信息</h2>
+  <div class="form-row">
+    <label>阳历生日</label>
+    <input type="date" id="birthDate" value="1990-01-01">
+  </div>
+  <div class="form-row">
+    <label>出生时辰</label>
+    <select id="birthHour">
+      <option value="0">子时（23:01–01:00）</option>
+      <option value="1">丑时（01:01–03:00）</option>
+      <option value="2">寅时（03:01–05:00）</option>
+      <option value="3">卯时（05:01–07:00）</option>
+      <option value="4">辰时（07:01–09:00）</option>
+      <option value="5">巳时（09:01–11:00）</option>
+      <option value="6">午时（11:01–13:00）</option>
+      <option value="7">未时（13:01–15:00）</option>
+      <option value="8">申时（15:01–17:00）</option>
+      <option value="9">酉时（17:01–19:00）</option>
+      <option value="10">戌时（19:01–21:00）</option>
+      <option value="11">亥时（21:01–23:00）</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label>性别</label>
+    <select id="gender">
+      <option value="male">男</option>
+      <option value="female">女</option>
+    </select>
+  </div>
+  <div id="error-msg"></div>
+  <button id="calcBtn" onclick="calculate()">排　盘</button>
+</div>
+
+<div id="chart-container">
+  <div class="chart-title" id="chart-title"></div>
+  <div class="chart-grid" id="chart-grid"></div>
+</div>
+<div id="limit-panel"></div>
+
+<!-- Rule2 解读按钮与面板 -->
+<button id="rule2-btn" onclick="toggleRule2Panel()">解　读　命　盘</button>
+<div id="rule2-panel">
+  <h3>命盘解读（来源：《紫微斗数精成》第八章/第九章）</h3>
+  <div class="r2-palace-tabs" id="r2-tabs"></div>
+  <div id="r2-content"></div>
+</div>
+
+<script>
+// ============================================================
+//  紫微斗数排盘计算引擎
+//  规则来源：《紫微斗数集成全书》（大德山人 著）
+//  rules/rules_book1.md
+// ============================================================
+
+// --- 基础常量 ---
+
+const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const STEMS    = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+
+// 地支索引：子=0,丑=1,...亥=11
+function branchIdx(name) { return BRANCHES.indexOf(name); }
+
+// 时辰地支（子=0,...亥=11）
+const HOUR_BRANCH = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+// 月份对应地支宫（正月=寅=2，二月=卯=3，... 十二月=丑=1）
+// 月份 1-12 → 地支索引(子=0)
+function monthBranchIdx(month) {
+  // 正月寅(2), 二月卯(3), ..., 十月亥(10), 十一月子(0), 十二月丑(1)
+  const map = [null,2,3,4,5,6,7,8,9,10,11,0,1];
+  return map[month];
+}
+
+// ---- 宫干表（来源：rules_book1.md §2.4）----
+// 年干 → 寅宫干（五虎遁年）
+const YIN_PALACE_STEM = {
+  '甲':2,'己':2,  // 丙=2
+  '乙':4,'庚':4,  // 戊=4
+  '丙':6,'辛':6,  // 庚=6
+  '丁':8,'壬':8,  // 壬=8
+  '戊':0,'癸':0   // 甲=0
+};
+// 地支索引(寅=2)→宫干索引
+function palaceStemIdx(yearStemName, branchIndex) {
+  const yinStemIdx = YIN_PALACE_STEM[yearStemName];
+  // 寅=2，卯=3，...依次顺时针，天干循环
+  const offset = (branchIndex - 2 + 12) % 12;
+  return (yinStemIdx + offset) % 10;
+}
+
+// ---- 五行局表（来源：rules_book1.md §2.5）----
+// 纳音五行速记：天干数+地支数 mod 5 → 五行 → 局数
+const STEM_NUM = {'甲':1,'乙':1,'丙':2,'丁':2,'戊':3,'己':3,'庚':4,'辛':4,'壬':5,'癸':5};
+const BRANCH_NUM = {
+  '子':1,'丑':1,'午':1,'未':1,
+  '寅':2,'卯':2,'申':2,'酉':2,
+  '辰':3,'巳':3,'戌':3,'亥':3
+};
+const NAYIN_TO_JU = [null, 3, 4, 2, 6, 5]; // index 1-5 → 局数：木3金4水2火6土5
+
+function calcJu(stemName, branchName) {
+  let sum = STEM_NUM[stemName] + BRANCH_NUM[branchName];
+  if (sum > 5) sum -= 5;
+  return NAYIN_TO_JU[sum]; // 局数：2/3/4/5/6
+}
+
+// ---- 紫微星位置（来源：rules_book1.md §3）----
+// 查表法：五行局 × 出生日(1-30) → 紫微星地支索引
+// 水2/木3/金4/土5/火6 → 索引0-4
+const ZIWEI_TABLE = {
+  2: [ // 水二局 (日1-30)
+    1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,0,0,1,1,2,2,3,3,4
+  ],
+  3: [ // 木三局
+    4,1,2,5,2,3,6,3,4,7,4,5,8,5,6,9,6,7,10,7,8,11,8,9,0,9,10,1,10,11
+  ],
+  4: [ // 金四局
+    11,4,1,2,0,5,2,3,1,6,3,4,2,7,4,5,6,3,8,5,6,4,9,6,7,5,10,7,8,6
+  ],
+  5: [ // 土五局
+    6,11,4,1,2,7,0,5,2,3,8,1,6,3,4,9,2,7,4,5,10,3,8,5,6,11,4,9,6,7
+  ],
+  6: [ // 火六局
+    9,6,11,4,1,2,10,7,0,5,2,3,11,8,1,6,3,4,0,9,2,7,4,5,1,10,3,8,5,6
+  ]
+};
+
+// 地支索引映射：寅=0→在排盘中宫位数D，D与地支对应
+// D: 寅=1,卯=2,辰=3,巳=4,午=5,未=6,申=7,酉=8,戌=9,亥=10,子=11,丑=12
+// 地支索引(子=0): 寅=2,卯=3,辰=4,巳=5,午=6,未=7,申=8,酉=9,戌=10,亥=11,子=0,丑=1
+function getZiweiPos(ju, day) {
+  // day: 1-30
+  const idx = ZIWEI_TABLE[ju][day - 1];
+  return idx; // 返回地支索引(子=0)
+}
+
+// ---- 天府星位置（来源：rules_book1.md §4.1）----
+// 紫府镜像规则（以寅申轴对称）
+function getTianfuPos(ziweiPos) {
+  // 寅=2,申=8 → 同宫
+  // 其余：以寅申轴做镜像
+  // 规律：府 = (4 - ziwei + 12) % 12，验证：
+  // 子(0)→辰(4)✓, 丑(1)→卯(3)✓, 寅(2)→寅(2)✓, 卯(3)→丑(1)✓
+  // 辰(4)→子(0)✓, 巳(5)→亥(11)✓, 午(6)→戌(10)✓, 未(7)→酉(9)✓
+  // 申(8)→申(8)✓, 酉(9)→未(7)✓, 戌(10)→午(6)✓, 亥(11)→巳(5)✓
+  return (4 - ziweiPos + 12) % 12;
+}
+
+// ---- 十四主星安布（来源：rules_book1.md §4.2/4.3）----
+// 紫微星系（逆布）：紫(0)→天机(-1)→太阳(-3)→武曲(-4)→天同(-5)→廉贞(-8)
+// 注："-N"表示从紫微逆N宫
+const ZIWEI_SYSTEM_OFFSET = {
+  '紫微': 0,
+  '天机': -1,
+  '太阳': -3,
+  '武曲': -4,
+  '天同': -5,
+  '廉贞': -8
+};
+// 天府星系（顺布）：府(0)→太阴(+1)→贪狼(+2)→巨门(+3)→天相(+4)→天梁(+5)→七杀(+6)→破军(+10)
+const TIANFU_SYSTEM_OFFSET = {
+  '天府': 0,
+  '太阴': 1,
+  '贪狼': 2,
+  '巨门': 3,
+  '天相': 4,
+  '天梁': 5,
+  '七杀': 6,
+  '破军': 10
+};
+
+function getMainStars(ziweiPos, tianfuPos) {
+  const stars = {};
+  for (const [name, offset] of Object.entries(ZIWEI_SYSTEM_OFFSET)) {
+    stars[name] = (ziweiPos + offset + 12) % 12;
+  }
+  for (const [name, offset] of Object.entries(TIANFU_SYSTEM_OFFSET)) {
+    stars[name] = (tianfuPos + offset) % 12;
+  }
+  return stars; // { 星名: 地支索引 }
+}
+
+// ---- 四化（来源：rules_book1.md §5）----
+const SIHUA = {
+  '甲': {禄:'廉贞', 权:'破军', 科:'武曲', 忌:'太阳'},
+  '乙': {禄:'天机', 权:'天梁', 科:'紫微', 忌:'太阴'},
+  '丙': {禄:'天同', 权:'天机', 科:'文昌', 忌:'廉贞'},
+  '丁': {禄:'太阴', 权:'天同', 科:'天机', 忌:'巨门'},
+  '戊': {禄:'贪狼', 权:'太阴', 科:'右弼', 忌:'天机'},
+  '己': {禄:'武曲', 权:'贪狼', 科:'天梁', 忌:'文曲'},
+  '庚': {禄:'太阳', 权:'武曲', 科:'太阴', 忌:'天同'},
+  '辛': {禄:'巨门', 权:'太阳', 科:'文曲', 忌:'文昌'},
+  '壬': {禄:'天梁', 权:'紫微', 科:'左辅', 忌:'武曲'},
+  '癸': {禄:'破军', 权:'巨门', 科:'太阴', 忌:'贪狼'}
+};
+
+// ---- 月系诸星（来源：rules_book1.md §6）----
+// 月份(1-12) → 各星地支索引
+function getMonthStars(month) {
+  // 左辅：从辰(4)起正月，顺时针
+  const zuofu = (4 + month - 1) % 12;
+  // 右弼：从戌(10)起正月，逆时针
+  const youbi = (10 - (month - 1) + 12) % 12;
+  // 天刑：从酉(9)起正月，顺时针
+  const tianxing = (9 + month - 1) % 12;
+  // 天姚：从丑(1)起正月，顺时针
+  const tianyao = (1 + month - 1) % 12;
+  // 阴煞：正月至十二月序列（寅=2,子=0,戌=10,申=8,午=6,辰=4,循环）
+  const yinsha_seq = [2,0,10,8,6,4,2,0,10,8,6,4];
+  const yinsha = yinsha_seq[month-1];
+  // 天月：无规律，查表
+  const tianyu_seq = [10,5,4,2,7,3,11,7,2,6,10,2]; // 戌巳辰寅未卯亥未寅午戌寅
+  const tianyu = tianyu_seq[month-1];
+  // 天巫：巳申亥寅循环（巳=5,申=8,亥=11,寅=2）
+  const tianwu_seq = [5,8,11,2,5,8,11,2,5,8,11,2];
+  const tianwu = tianwu_seq[month-1];
+  return { '左辅':zuofu,'右弼':youbi,'天刑':tianxing,'天姚':tianyao,
+           '阴煞':yinsha,'天月':tianyu,'天巫':tianwu };
+}
+
+// ---- 时系诸星（来源：rules_book1.md §7）----
+function getHourStars(hourBrIdx) {
+  // 文昌：从戌(10)起子时，逆时针
+  const wenchang = (10 - hourBrIdx + 12) % 12;
+  // 文曲：从辰(4)起子时，顺时针
+  const wenqu = (4 + hourBrIdx) % 12;
+  // 天空：从亥(11)起子时，逆时针
+  const tiankong = (11 - hourBrIdx + 12) % 12;
+  // 地劫：从亥(11)起子时，顺时针
+  const dijie = (11 + hourBrIdx) % 12;
+  // 台辅：从午(6)起子时，顺时针
+  const taifu = (6 + hourBrIdx) % 12;
+  // 封诰：从寅(2)起子时，顺时针
+  const fenggao = (2 + hourBrIdx) % 12;
+  return { '文昌':wenchang,'文曲':wenqu,'天空':tiankong,
+           '地劫':dijie,'台辅':taifu,'封诰':fenggao };
+}
+
+// ---- 年支系诸星（来源：rules_book1.md §8）----
+function getYearBranchStars(yearBrIdx) {
+  // 天喜：从酉(9)起子年，逆时针
+  const tianxi = (9 - yearBrIdx + 12) % 12;
+  // 红鸾：从卯(3)起子年，逆时针
+  const hongluan = (3 - yearBrIdx + 12) % 12;
+  // 天喜 = 红鸾对宫
+  const tianxi2 = (hongluan + 6) % 12;
+  // 天虚：从午(6)起子年，顺时针
+  const tianxu = (6 + yearBrIdx) % 12;
+  // 天哭：从午(6)起子年，逆时针
+  const tianku = (6 - yearBrIdx + 12) % 12;
+  // 天德：从酉(9)起子年，顺时针
+  const tiande = (9 + yearBrIdx) % 12;
+  // 龙池：从辰(4)起子年，顺时针
+  const longchi = (4 + yearBrIdx) % 12;
+  // 凤阁：从戌(10)起子年，逆时针
+  const fengge = (10 - yearBrIdx + 12) % 12;
+  // 解神：从戌(10)起子年，逆时针
+  const jieshen = (10 - yearBrIdx + 12) % 12;
+  // 天马：寅午戌=申，申子辰=寅，巳酉丑=亥，亥卯未=巳（书第12步行1550）
+  const tianma_map = [2,11,8,5,2,11,8,5,2,11,8,5]; // 子丑寅卯辰巳午未申酉戌亥
+  const tianma = tianma_map[yearBrIdx];
+  // 蜚廉：子=申,丑=酉,寅=戌,卯=巳,辰=午,巳=未,午=寅,未=卯,申=辰,酉=亥,戌=子,亥=丑
+  const feilian_map = [8,9,10,5,6,7,2,3,4,11,0,1];
+  const feilian = feilian_map[yearBrIdx];
+  // 大耗：子=未,丑=午,寅=酉,卯=申,...
+  const dahao_map = [7,6,9,8,11,10,1,0,3,2,5,4];
+  const dahao = dahao_map[yearBrIdx];
+  // 破碎：子午卯酉=巳，辰戌丑未=丑，寅申巳亥=酉
+  let pocui;
+  if([0,4,6,9,3].includes(yearBrIdx)) pocui = 5; // 子午卯酉→巳(修正卯=3)
+  else {
+    // 重新按三组分
+    const pocui_map = [5,1,9,5,1,9,5,1,9,5,1,9]; // 子丑寅卯辰巳午未申酉戌亥
+    pocui = pocui_map[yearBrIdx];
+  }
+  const pocui_map2 = [5,1,9,5,1,9,5,1,9,5,1,9];
+  const pocui2 = pocui_map2[yearBrIdx];
+  // 华盖：申子辰=辰，亥卯未=未，寅午戌=戌，巳酉丑=丑
+  const huagai_map = [4,1,10,7,4,1,10,7,4,1,10,7];
+  const huagai = huagai_map[yearBrIdx];
+  // 劫煞：申子辰=巳，亥卯未=申，寅午戌=亥，巳酉丑=寅（书第12步行1556）
+  const jiesha_map = [5,2,11,8,5,2,11,8,5,2,11,8];
+  const jiesha = jiesha_map[yearBrIdx];
+  // 咸池：申子辰=酉，亥卯未=子，寅午戌=卯，巳酉丑=午
+  const xianchi_map = [9,6,3,0,9,6,3,0,9,6,3,0];
+  const xianchi = xianchi_map[yearBrIdx];
+  // 孤辰：寅卯辰=巳，巳午未=申，申酉戌=亥，亥子丑=寅
+  const guchen_map = [2,2,5,5,5,8,8,8,11,11,11,2];
+  const guchen = guchen_map[yearBrIdx];
+  // 寡宿：寅卯辰=丑，巳午未=辰，申酉戌=未，亥子丑=戌
+  const guasu_map = [10,10,1,1,1,4,4,4,7,7,7,10];
+  const guasu = guasu_map[yearBrIdx];
+
+  return {
+    '天喜':tianxi2,'红鸾':hongluan,'天虚':tianxu,'天哭':tianku,
+    '天德':tiande,'龙池':longchi,'凤阁':fengge,'解神':jieshen,
+    '天马':tianma,'蜚廉':feilian,'大耗':dahao,'破碎':pocui2,
+    '华盖':huagai,'劫煞':jiesha,'咸池':xianchi,'孤辰':guchen,'寡宿':guasu
+  };
+}
+
+// ---- 年干系诸星（来源：rules_book1.md §9）----
+// 禄存：甲寅乙卯丙巳丁午戊巳己午庚申辛酉壬亥癸子
+const LUSUN_MAP = {'甲':2,'乙':3,'丙':5,'丁':6,'戊':5,'己':6,'庚':8,'辛':9,'壬':11,'癸':0};
+// 天魁天钺
+const KUIYUE = {
+  '甲':{魁:1,钺:7},'乙':{魁:0,钺:8},'丙':{魁:11,钺:9},'丁':{魁:11,钺:9},
+  '戊':{魁:1,钺:7},'己':{魁:0,钺:8},'庚':{魁:1,钺:7},'辛':{魁:6,钺:2},
+  '壬':{魁:3,钺:5},'癸':{魁:3,钺:5}
+};
+// 天官、天福
+const TIANGUAN_MAP = {'甲':7,'乙':4,'丙':5,'丁':2,'戊':3,'己':9,'庚':11,'辛':9,'壬':10,'癸':6};
+const TIANFU_STAR_MAP = {'甲':9,'乙':8,'丙':0,'丁':11,'戊':3,'己':2,'庚':6,'辛':5,'壬':6,'癸':5};
+// 截空
+const JIEKONG_MAP = {
+  '甲':[8,9],'乙':[7,6],'丙':[4,5],'丁':[3,2],
+  '戊':[0,1],'己':[9,8],'庚':[7,6],'辛':[5,4],
+  '壬':[2,3],'癸':[1,0]
+};
+
+function getYearStemStars(yearStemName) {
+  const lusun = LUSUN_MAP[yearStemName];
+  const qingyang = (lusun + 1) % 12;  // 擎羊：禄存前一宫（顺时针）
+  const tuoluo = (lusun - 1 + 12) % 12; // 陀罗：禄存后一宫（逆时针）
+  const ky = KUIYUE[yearStemName];
+  const tianguan = TIANGUAN_MAP[yearStemName];
+  const tianfuStar = TIANFU_STAR_MAP[yearStemName];
+  const jk = JIEKONG_MAP[yearStemName];
+  return {
+    '禄存':lusun, '擎羊':qingyang, '陀罗':tuoluo,
+    '天魁':ky.魁, '天钺':ky.钺,
+    '天官':tianguan, '天福':tianfuStar,
+    '截空甲':jk[0], '截空乙':jk[1]
+  };
+}
+
+// ---- 火星/铃星（来源：rules_book1.md §10）----
+function getHuoLing(yearBrIdx, hourBrIdx) {
+  // 火星起始宫：寅午戌=丑，申子辰=寅，巳酉丑=卯，亥卯未=酉（书第14步行1587）
+  const huoStart_map = [2,3,1,9,2,3,1,9,2,3,1,9]; // 子丑寅卯辰巳午未申酉戌亥
+  // 铃星起始宫：寅午戌=卯，其余=戌
+  const lingStart_map = [10,10,3,10,10,10,3,10,10,10,3,10];
+  const huoStart = huoStart_map[yearBrIdx];
+  const lingStart = lingStart_map[yearBrIdx];
+  // 从起始宫起子时，顺时针数至生时
+  const huo = (huoStart + hourBrIdx) % 12;
+  const ling = (lingStart + hourBrIdx) % 12;
+  return { '火星':huo, '铃星':ling };
+}
+
+// ---- 日系诸星（来源：rules_book1.md §11-§12）----
+// 三台：由左辅所在宫起初一，顺时针数至出生日
+// 八座：由右弼所在宫起初一，逆时针数至出生日
+// 天贵：由文曲所在宫起初一，顺时针数至出生日，再退回一宫
+// 恩光：由文昌所在宫起初一，顺时针数至出生日，再退回一宫
+function getDayStars(lunarDay, zuofuPos, youbiPos, wenchangPos, wenquPos) {
+  const santai  = (zuofuPos + lunarDay - 1) % 12;
+  const bazuo   = ((youbiPos - (lunarDay - 1)) % 12 + 12) % 12;
+  const tiangui = ((wenquPos + lunarDay - 2) % 12 + 12) % 12;
+  const enguang = ((wenchangPos + lunarDay - 2) % 12 + 12) % 12;
+  return { '三台':santai, '八座':bazuo, '天贵':tiangui, '恩光':enguang };
+}
+
+// ---- 天才/天寿（来源：rules_book1.md §13）----
+// 天才：从命宫起子年，顺时针数至出生年支所在宫
+// 天寿：从身宫起子年，顺时针数至出生年支所在宫
+function getMingRelStars(mingGongBrIdx, shenGongBrIdx, yearBrIdx) {
+  const tiancai  = (mingGongBrIdx + yearBrIdx) % 12;
+  const tianshou = (shenGongBrIdx + yearBrIdx) % 12;
+  return { '天才':tiancai, '天寿':tianshou };
+}
+
+// ---- 大限（来源：rules_book1.md §15）----
+// 由命宫为起点，阳男阴女顺行，阴男阳女逆行，每宫管十年
+// 起限虚岁 = 五行局数
+function calcDaXian(mingGongBrIdx, ju, yearBrIdx, gender, lunarYear) {
+  const isYang = (yearBrIdx % 2 === 0); // 阳年：年支偶数索引（子寅辰午申戌）
+  const isMale = (gender === 'male');
+  const forward = (isYang && isMale) || (!isYang && !isMale); // 阳男或阴女→顺行
+  const result = [];
+  for (let n = 0; n < 12; n++) {
+    // 顺行：按宫名顺序（命→兄→夫→...），brIdx递减
+    // 逆行：逆宫名顺序（命→父→福→...），brIdx递增
+    const brIdx = forward
+      ? (mingGongBrIdx - n + 12) % 12
+      : (mingGongBrIdx + n) % 12;
+    const ageStart = ju + n * 10;
+    const ageEnd   = ju + (n + 1) * 10 - 1;
+    const yearStart = lunarYear + ageStart - 1;
+    const yearEnd   = lunarYear + ageEnd - 1;
+    result.push({ brIdx, ageStart, ageEnd, yearStart, yearEnd, idx: n });
+  }
+  return result;
+}
+
+// ---- 小限起点（来源：rules_book1.md §16）----
+function getXiaoXianStartBr(yearBrIdx) {
+  if ([2,6,10].includes(yearBrIdx)) return 4;   // 寅午戌→辰(4)
+  if ([8,0,4].includes(yearBrIdx))  return 10;  // 申子辰→戌(10)
+  if ([11,3,7].includes(yearBrIdx)) return 1;   // 亥卯未→丑(1)
+  return 7;                                      // 巳酉丑→未(7)
+}
+
+// 获取某虚岁的小限宫 brIdx（男顺+1/年，女逆-1/年）
+function calcXiaoXian(yearBrIdx, gender, age) {
+  const startBr = getXiaoXianStartBr(yearBrIdx);
+  const dir = (gender === 'male') ? 1 : -1;
+  return ((startBr + (age - 1) * dir) % 12 + 12) % 12;
+}
+
+// ---- 流年命宫（来源：rules_book1.md §17）----
+// 以当年年支所落宫位之宫支为流年命宫
+function calcLiuNian(year) {
+  return ((year - 4) % 12 + 12) % 12;
+}
+
+// ---- 斗君（来源：rules_book1.md §18）----
+// 公式：斗君(Y) = (流年太岁宫 - 出生月 + 1 + 出生时辰支 + 12N) % 12
+function calcDouJun(lunarYear, lunarMonth, hourBrIdx, targetYear) {
+  const L = ((targetYear - 4) % 12 + 12) % 12; // 流年太岁宫
+  return ((L - lunarMonth + 1 + hourBrIdx) % 12 + 12) % 12;
+}
+// 流月M（正月=斗君宫，顺布）
+function calcLiuYue(douJunBr, month) {
+  return (douJunBr + month - 1) % 12;
+}
+
+// ---- 流日（来源：rules_book1.md §流日）----
+// 以流月宫起初一，顺行12宫，每日一宫
+function calcLiuRi(liuYueBr, day) {
+  return (liuYueBr + day - 1) % 12;
+}
+
+// ---- 流时（来源：rules_book1.md §流时）----
+// 以流日宫起子时，顺布12宫
+function calcLiuShi(liuRiBr, hour) {
+  return (liuRiBr + hour) % 12;
+}
+
+// ---- 博士十二神（来源：rules_book1.md §19）----
+// 从禄存宫起，阳男阴女顺行(-1/宫)，阴男阳女逆行(+1/宫)
+const BOSHI_NAMES = ['博士','力士','青龙','小耗','将军','奏书','飞廉','喜神','病符','大耗','伏兵','官符'];
+function getBoshiStars(lusunPos, yearBrIdx, gender) {
+  const isYang = (yearBrIdx % 2 === 0);
+  const isMale = (gender === 'male');
+  const forward = (isYang && isMale) || (!isYang && !isMale); // 阳男阴女顺行
+  const dir = forward ? -1 : 1; // 顺行=宫名顺序=brIdx递减
+  const result = {};
+  for (let n = 0; n < 12; n++) {
+    const br = ((lusunPos + dir * n) % 12 + 12) % 12;
+    result[BOSHI_NAMES[n]] = br;
+  }
+  return result;
+}
+
+// ---- 长生十二神（来源：rules_book1.md §20）----
+// 长生起始宫：金→巳(5)，木→亥(11)，火→寅(2)，水/土→申(8)
+const CHANGSHENG_START = { 2:8, 3:11, 4:5, 5:8, 6:2 };
+const CHANGSHENG_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
+function getChangshengStars(ju, gender) {
+  const startBr = CHANGSHENG_START[ju];
+  const isMale = (gender === 'male');
+  const dir = isMale ? 1 : -1; // 男顺(+1)女逆(-1)
+  const result = {};
+  for (let n = 0; n < 12; n++) {
+    const br = ((startBr + dir * n) % 12 + 12) % 12;
+    result[CHANGSHENG_NAMES[n]] = br;
+  }
+  return result;
+}
+
+// ---- 旬空星（修正版，来源：rules_book1.md §21）----
+// 年干支→60甲子真实序号→旬头地支→旬空两支
+// 正确公式：s=((stem-branch)%10+10)%10; t=s/2; n=branch+12*t
+// 旧公式 n=(stem*12+branch)%60 错误：会落入错误的旬
+function getXunKong(yearStemIdx, yearBrIdx) {
+  const s = ((yearStemIdx - yearBrIdx) % 10 + 10) % 10; // s 一定是偶数
+  const t = s / 2;
+  const n = yearBrIdx + 12 * t; // 60甲子中的真实序号
+  const xunHeadN = n - (n % 10); // 旬头序号（天干=甲）
+  const xunHeadBr = xunHeadN % 12; // 旬头地支索引
+  // 旬空 = 旬头地支退后1位和2位（该旬十年中未出现的两个地支）
+  const k1 = (xunHeadBr - 1 + 12) % 12;
+  const k2 = (xunHeadBr - 2 + 12) % 12;
+  return [k1, k2];
+}
+
+// ---- 全局命盘状态 ----
+let _chartState = null;
+
+// ---- 清除流时选择 ----
+function clearLiuShi() {
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liushi-active'));
+  const s = document.getElementById('liushi-svg');
+  if (s) s.remove();
+  const d = document.getElementById('liushi-detail');
+  if (d) d.remove();
+}
+
+// ---- 清除流日选择 ----
+function clearLiuRi() {
+  clearLiuShi();
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liuri-active'));
+  const s = document.getElementById('liuri-svg');
+  if (s) s.remove();
+  const d = document.getElementById('liuri-detail');
+  if (d) d.remove();
+}
+
+// ---- 清除流月选择 ----
+function clearLiuYue() {
+  clearLiuRi();
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liuyue-active'));
+  const oldLY = document.getElementById('liuyue-svg');
+  if (oldLY) oldLY.remove();
+  const det = document.getElementById('liunian-detail');
+  if (det) det.remove();
+  const sep = document.querySelector('#limit-panel .sep');
+  if (sep) sep.remove();
+}
+
+// ---- 选择大限 ----
+function selectDaXian(n) {
+  if (!_chartState) return;
+  const dx = _chartState.daXianData[n];
+  _chartState.activeDaXian = n;
+  _chartState.activeLiuNian = null;
+
+  document.querySelectorAll('.palace').forEach(el => {
+    el.classList.remove('daxian-active', 'liunian-active', 'liuyue-active');
+  });
+  const activeEl = document.getElementById(`palace-${dx.brIdx}`);
+  if (activeEl) activeEl.classList.add('daxian-active');
+
+  drawOverlay('daxian-svg', dx.brIdx, '#0055bb', 0.65);
+  ['liunian-svg','liuyue-svg','liuri-svg','liushi-svg'].forEach(id => { const e = document.getElementById(id); if(e) e.remove(); });
+
+  renderLimitPanel(dx);
+}
+
+// ---- 选择流年 ----
+function selectLiuNian(year) {
+  if (!_chartState) return;
+  _chartState.activeLiuNian = year;
+
+  const liuNianBr = calcLiuNian(year);
+
+  clearLiuYue();
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liunian-active'));
+  const activeEl = document.getElementById(`palace-${liuNianBr}`);
+  if (activeEl) activeEl.classList.add('liunian-active');
+
+  drawOverlay('liunian-svg', liuNianBr, '#cc5500', 0.65);
+
+  document.querySelectorAll('.liunian-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.year) === year);
+  });
+
+  // 显示斗君与流月面板
+  const douJunBr = calcDouJun(
+    _chartState.lunarYear, _chartState.lunarMonth,
+    _chartState.hourBrIdx, year
+  );
+  renderLiuYuePanel(year, liuNianBr, douJunBr);
+}
+
+// ---- 渲染大限年份面板 ----
+function renderLimitPanel(dx) {
+  const panel = document.getElementById('limit-panel');
+  panel.style.display = 'block';
+  const { ageStart, ageEnd, yearStart, yearEnd } = dx;
+  panel.innerHTML =
+    `<h3>大限 ${ageStart}–${ageEnd}岁（${yearStart}–${yearEnd}年）</h3>` +
+    `<div class="limit-years" id="limit-years"></div>`;
+
+  const yearsDiv = document.getElementById('limit-years');
+  for (let yr = yearStart; yr <= yearEnd; yr++) {
+    const age = yr - _chartState.lunarYear + 1;
+    const btn = document.createElement('button');
+    btn.className = 'liunian-btn';
+    btn.dataset.year = yr;
+    btn.textContent = `${yr}年（${age}岁）`;
+    btn.onclick = () => selectLiuNian(yr);
+    if (_chartState.activeLiuNian === yr) btn.classList.add('active');
+    yearsDiv.appendChild(btn);
+  }
+}
+
+// ---- 渲染斗君流月子面板 ----
+function renderLiuYuePanel(year, liuNianBr, douJunBr) {
+  const existing = document.getElementById('liunian-detail');
+  if (existing) existing.remove();
+  const panel = document.getElementById('limit-panel');
+  if (!panel) return;
+
+  const MONTHS = ['正','二','三','四','五','六','七','八','九','十','十一','十二'];
+  // 流年四化（用流年年干，非命盘年干）
+  const flowStemIdx = ((year - 4) % 10 + 10) % 10;
+  const flowStem = STEMS[flowStemIdx];
+  const flowSihua = SIHUA[flowStem];
+  let html = `<hr class="sep">`;
+  html += `<div id="liunian-detail">`;
+  html += `<h3>流年 ${year}年 &nbsp;|&nbsp; 流年命宫：${BRANCHES[liuNianBr]} &nbsp;|&nbsp; 斗君（正月）：${BRANCHES[douJunBr]}</h3>`;
+  html += `<div style="font-size:0.8em;color:#5a3800;margin-bottom:6px;padding:4px 6px;background:#fff8ee;border-radius:4px;border:1px solid #e8d090">` +
+    `流年年干：<strong>${flowStem}</strong> &nbsp;` +
+    `化禄：<span style="color:#007700;font-weight:bold">${flowSihua['禄']}</span> &nbsp;` +
+    `化权：<span style="color:#cc5500;font-weight:bold">${flowSihua['权']}</span> &nbsp;` +
+    `化科：<span style="color:#0055aa;font-weight:bold">${flowSihua['科']}</span> &nbsp;` +
+    `化忌：<span style="color:#cc0000;font-weight:bold">${flowSihua['忌']}</span>` +
+    `</div>`;
+  html += `<div class="limit-years">`;
+  for (let m = 1; m <= 12; m++) {
+    const br = calcLiuYue(douJunBr, m);
+    html += `<button class="liuyue-btn" data-month="${m}" onclick="selectLiuYue(${year},${m})">${MONTHS[m-1]}月·${BRANCHES[br]}</button>`;
+  }
+  html += `</div></div>`;
+  panel.insertAdjacentHTML('beforeend', html);
+}
+
+// ---- 选择流月 ----
+function selectLiuYue(year, month) {
+  if (!_chartState) return;
+  clearLiuRi();
+  const douJunBr = calcDouJun(_chartState.lunarYear, _chartState.lunarMonth, _chartState.hourBrIdx, year);
+  const liuYueBr = calcLiuYue(douJunBr, month);
+
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liuyue-active'));
+  const el = document.getElementById(`palace-${liuYueBr}`);
+  if (el) el.classList.add('liuyue-active');
+
+  drawOverlay('liuyue-svg', liuYueBr, '#6600cc', 0.6);
+
+  document.querySelectorAll('.liuyue-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.month) === month);
+  });
+
+  renderLiuRiPanel(year, month, liuYueBr);
+}
+
+// ---- 渲染流日面板 ----
+function renderLiuRiPanel(year, month, liuYueBr) {
+  const existing = document.getElementById('liuri-detail');
+  if (existing) existing.remove();
+  const MONTHS = ['正','二','三','四','五','六','七','八','九','十','十一','十二'];
+  let html = `<div id="liuri-detail" style="margin-top:8px">`;
+  html += `<h3 style="font-size:0.85em;color:#006666;margin-bottom:5px">流日（${MONTHS[month-1]}月，起宫：${BRANCHES[liuYueBr]}）</h3>`;
+  html += `<div class="limit-years">`;
+  for (let d = 1; d <= 30; d++) {
+    const br = calcLiuRi(liuYueBr, d);
+    html += `<button class="liuri-btn" data-day="${d}" onclick="selectLiuRi(${year},${month},${d})">${d}·${BRANCHES[br]}</button>`;
+  }
+  html += `</div></div>`;
+  const det = document.getElementById('liunian-detail');
+  if (det) det.insertAdjacentHTML('afterend', html);
+}
+
+// ---- 选择流日 ----
+function selectLiuRi(year, month, day) {
+  if (!_chartState) return;
+  clearLiuShi();
+  const douJunBr = calcDouJun(_chartState.lunarYear, _chartState.lunarMonth, _chartState.hourBrIdx, year);
+  const liuYueBr = calcLiuYue(douJunBr, month);
+  const liuRiBr = calcLiuRi(liuYueBr, day);
+
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liuri-active'));
+  const el = document.getElementById(`palace-${liuRiBr}`);
+  if (el) el.classList.add('liuri-active');
+
+  drawOverlay('liuri-svg', liuRiBr, '#008080', 0.55);
+
+  document.querySelectorAll('.liuri-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.day) === day);
+  });
+
+  renderLiuShiPanel(year, month, day, liuRiBr);
+}
+
+// ---- 渲染流时面板 ----
+function renderLiuShiPanel(year, month, day, liuRiBr) {
+  const existing = document.getElementById('liushi-detail');
+  if (existing) existing.remove();
+  const HOUR_NAMES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  let html = `<div id="liushi-detail" style="margin-top:8px">`;
+  html += `<h3 style="font-size:0.85em;color:#770055;margin-bottom:5px">流时（${month}月${day}日，起宫：${BRANCHES[liuRiBr]}）</h3>`;
+  html += `<div class="limit-years">`;
+  for (let h = 0; h < 12; h++) {
+    const br = calcLiuShi(liuRiBr, h);
+    html += `<button class="liushi-btn" data-hour="${h}" onclick="selectLiuShi(${year},${month},${day},${h})">${HOUR_NAMES[h]}·${BRANCHES[br]}</button>`;
+  }
+  html += `</div></div>`;
+  const det = document.getElementById('liuri-detail');
+  if (det) det.insertAdjacentHTML('afterend', html);
+}
+
+// ---- 选择流时 ----
+function selectLiuShi(year, month, day, hour) {
+  if (!_chartState) return;
+  const douJunBr = calcDouJun(_chartState.lunarYear, _chartState.lunarMonth, _chartState.hourBrIdx, year);
+  const liuYueBr = calcLiuYue(douJunBr, month);
+  const liuRiBr = calcLiuRi(liuYueBr, day);
+  const liuShiBr = calcLiuShi(liuRiBr, hour);
+
+  document.querySelectorAll('.palace').forEach(el => el.classList.remove('liushi-active'));
+  const el = document.getElementById(`palace-${liuShiBr}`);
+  if (el) el.classList.add('liushi-active');
+
+  drawOverlay('liushi-svg', liuShiBr, '#990066', 0.5);
+
+  document.querySelectorAll('.liushi-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.hour) === hour);
+  });
+}
+
+// ---- 通用三方四正虚线绘制 ----
+function drawOverlay(svgId, targetBrIdx, color, opacity) {
+  const oldSvg = document.getElementById(svgId);
+  if (oldSvg) oldSvg.remove();
+
+  const grid = document.getElementById('chart-grid');
+  if (!grid) return;
+  const gridRect = grid.getBoundingClientRect();
+
+  const sfszBranches = [
+    targetBrIdx,
+    (targetBrIdx - 4 + 12) % 12,
+    (targetBrIdx - 6 + 12) % 12,
+    (targetBrIdx - 8 + 12) % 12,
+  ];
+
+  const centers = sfszBranches.map(brIdx => {
+    const el = document.getElementById(`palace-${brIdx}`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: r.left - gridRect.left + r.width / 2,
+      y: r.top  - gridRect.top  + r.height / 2
+    };
+  });
+
+  if (centers.some(c => c === null)) return;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = svgId;
+  svg.setAttribute('width',  gridRect.width);
+  svg.setAttribute('height', gridRect.height);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:10;';
+
+  const pairs = [[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]];
+  for (const [i, j] of pairs) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', centers[i].x);
+    line.setAttribute('y1', centers[i].y);
+    line.setAttribute('x2', centers[j].x);
+    line.setAttribute('y2', centers[j].y);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '1.5');
+    line.setAttribute('stroke-dasharray', '6,4');
+    line.setAttribute('opacity', opacity);
+    svg.appendChild(line);
+  }
+
+  grid.appendChild(svg);
+}
+
+// ---- 命主/身主（来源：rules_book1.md §8）----
+// 命主：以命宫地支
+const MINGZHU_MAP = {0:'贪狼',1:'巨门',2:'禄存',3:'文曲',4:'廉贞',5:'武曲',6:'破军',7:'武曲',8:'廉贞',9:'文曲',10:'禄存',11:'巨门'};
+// 身主：以生年地支
+const SHENZHU_MAP = {0:'铃星',1:'天相',2:'天梁',3:'天同',4:'文昌',5:'天机',6:'火星',7:'天相',8:'天梁',9:'天同',10:'文昌',11:'天机'};
+
+// ============================================================
+//  主排盘函数
+// ============================================================
+
+function calculate() {
+  const errEl = document.getElementById('error-msg');
+  errEl.style.display = 'none';
+
+  // 1. 读取输入
+  const dateStr = document.getElementById('birthDate').value;
+  const hourBrIdx = parseInt(document.getElementById('birthHour').value);
+  const gender = document.getElementById('gender').value;
+
+  if (!dateStr) { showError('请输入出生日期'); return; }
+
+  const [y, m, d] = dateStr.split('-').map(Number);
+
+  // 2. 阳历→农历（使用 lunar-javascript 库）
+  let lunar;
+  try {
+    const solar = Lunar.fromSolar(Solar.fromYmd(y, m, d));
+    lunar = solar;
+  } catch(e) {
+    // 兼容不同 lunar-javascript 版本
+    try {
+      const sol = Solar.fromYmd(y, m, d);
+      lunar = sol.getLunar();
+    } catch(e2) {
+      showError('农历转换失败，请检查日期');
+      return;
+    }
+  }
+
+  let lunarYear, lunarMonth, lunarDay, lunarLeap;
+  try {
+    // lunar-javascript API
+    const sol = Solar.fromYmd(y, m, d);
+    const lun = sol.getLunar();
+    lunarYear  = lun.getYear();
+    lunarMonth = lun.getMonth();  // 负数表示闰月
+    lunarDay   = lun.getDay();
+    lunarLeap  = lunarMonth < 0;
+    if (lunarLeap) lunarMonth = Math.abs(lunarMonth) + 1; // 闰月按下月处理
+  } catch(e) {
+    showError('lunar-javascript 库未正确加载，请检查网络连接');
+    return;
+  }
+
+  // 3. 确定年干支
+  // 农历年支：(年-4) mod 12 → 地支索引
+  const yearBrIdx   = ((lunarYear - 4) % 12 + 12) % 12;
+  const yearStemIdx = ((lunarYear - 4) % 10 + 10) % 10;
+  const yearStem    = STEMS[yearStemIdx];
+  const yearBr      = BRANCHES[yearBrIdx];
+
+  // 4. 安命宫（来源：rules_book1.md §2.1）
+  // 从寅(2)起正月，顺时针到出生月
+  const monthBrId = monthBranchIdx(lunarMonth); // 地支索引
+  // 从 monthBrId 起子时(0)，逆时针数 hourBrIdx 步
+  const mingGongBrIdx = (monthBrId - hourBrIdx + 12) % 12;
+
+  // 5. 安身宫（来源：rules_book1.md §2.2）
+  const shenGongBrIdx = (monthBrId + hourBrIdx) % 12;
+
+  // 6. 十二宫（逆时针排列宫名）
+  const PALACE_NAMES = ['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','奴仆','官禄','田宅','福德','父母'];
+  // 宫名 → 地支索引
+  const palaceMap = {}; // { 地支索引: 宫名 }
+  for (let i = 0; i < 12; i++) {
+    const brIdx = (mingGongBrIdx - i + 12) % 12;
+    palaceMap[brIdx] = PALACE_NAMES[i];
+  }
+
+  // 7. 宫干
+  const palaceStemMap = {}; // { 地支索引: 天干名 }
+  for (let bi = 0; bi < 12; bi++) {
+    palaceStemMap[bi] = STEMS[palaceStemIdx(yearStem, bi)];
+  }
+
+  // 8. 五行局
+  const mingGongStem = palaceStemMap[mingGongBrIdx];
+  const mingGongBr   = BRANCHES[mingGongBrIdx];
+  const ju = calcJu(mingGongStem, mingGongBr);
+  const JU_NAMES = {2:'水二局',3:'木三局',4:'金四局',5:'土五局',6:'火六局'};
+
+  // 9. 紫微星位置
+  const ziweiPos  = getZiweiPos(ju, lunarDay);
+  const tianfuPos = getTianfuPos(ziweiPos);
+
+  // 10. 十四主星
+  const mainStars = getMainStars(ziweiPos, tianfuPos);
+
+  // 11. 四化
+  const sihua = SIHUA[yearStem];
+
+  // 12. 月系诸星
+  const monthStars = getMonthStars(lunarMonth);
+
+  // 13. 时系诸星
+  const hourStars = getHourStars(hourBrIdx);
+
+  // 14. 年支系诸星
+  const yearBrStars = getYearBranchStars(yearBrIdx);
+
+  // 15. 年干系诸星
+  const yearStemStars = getYearStemStars(yearStem);
+
+  // 16. 火星/铃星
+  const huoLing = getHuoLing(yearBrIdx, hourBrIdx);
+
+  // 17. 命主/身主
+  const mingzhu = MINGZHU_MAP[mingGongBrIdx];
+  const shenzhu = SHENZHU_MAP[yearBrIdx];
+
+  // 18. 日系诸星（三台、八座、天贵、恩光）（来源：rules_book1.md §11-§12）
+  const dayStars = getDayStars(lunarDay, monthStars['左辅'], monthStars['右弼'],
+                               hourStars['文昌'], hourStars['文曲']);
+
+  // 19. 天才/天寿（来源：rules_book1.md §13）
+  const mingRelStars = getMingRelStars(mingGongBrIdx, shenGongBrIdx, yearBrIdx);
+
+  // 20. 天伤/天使（来源：rules_book1.md §14）天伤固定在奴仆宫，天使固定在疾厄宫
+  const nupuBrIdx = (mingGongBrIdx - 7 + 12) % 12;
+  const jieBrIdx  = (mingGongBrIdx - 5 + 12) % 12;
+
+  // 21. 大限（来源：rules_book1.md §15）
+  const daXianData = calcDaXian(mingGongBrIdx, ju, yearBrIdx, gender, lunarYear);
+
+  // 22. 博士十二神（来源：rules_book1.md §19）
+  const lusunPos = yearStemStars['禄存'];
+  const boshiStars = getBoshiStars(lusunPos, yearBrIdx, gender);
+
+  // 23. 长生十二神（来源：rules_book1.md §20）
+  const changshengStars = getChangshengStars(ju, gender);
+
+  // 24. 旬空（修正版，来源：rules_book1.md §21）
+  const xunKong = getXunKong(yearStemIdx, yearBrIdx);
+
+  // ---- 汇总每个宫位的星曜 ----
+  // 结构：stars[地支索引] = { main:[], aux:[], hua:{} }
+  const stars = {};
+  for (let i = 0; i < 12; i++) stars[i] = { main:[], aux:[], hua:{} };
+
+  // 主星
+  for (const [name, pos] of Object.entries(mainStars)) {
+    stars[pos].main.push(name);
+  }
+  // 月系
+  for (const [name, pos] of Object.entries(monthStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 时系
+  for (const [name, pos] of Object.entries(hourStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 年支系
+  for (const [name, pos] of Object.entries(yearBrStars)) {
+    if (typeof pos === 'number') stars[pos].aux.push(name);
+  }
+  // 年干系（禄存/擎羊/陀罗/天魁/天钺算辅星）
+  for (const [name, pos] of Object.entries(yearStemStars)) {
+    if (typeof pos === 'number' && !name.startsWith('截空')) {
+      stars[pos].aux.push(name);
+    }
+  }
+  // 截空（来源：rules_book1.md §截空，书第13步 line 1584，按年干推算）
+  const jk = JIEKONG_MAP[yearStem];
+  stars[jk[0]].aux.push('截空');
+  if (jk[1] !== jk[0]) stars[jk[1]].aux.push('截空');
+  // 火星/铃星
+  for (const [name, pos] of Object.entries(huoLing)) {
+    stars[pos].aux.push(name);
+  }
+  // 日系（三台、八座、天贵、恩光）
+  for (const [name, pos] of Object.entries(dayStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 天才/天寿
+  for (const [name, pos] of Object.entries(mingRelStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 天伤/天使（固定宫位）
+  stars[nupuBrIdx].aux.push('天伤');
+  stars[jieBrIdx].aux.push('天使');
+  // 博士十二神
+  for (const [name, pos] of Object.entries(boshiStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 长生十二神
+  for (const [name, pos] of Object.entries(changshengStars)) {
+    stars[pos].aux.push(name);
+  }
+  // 旬空（修正版，替换旧截空）
+  stars[xunKong[0]].aux.push('旬空');
+  if (xunKong[1] !== xunKong[0]) stars[xunKong[1]].aux.push('旬空');
+  // 四化标注到主星宫位
+  for (const [huaType, starName] of Object.entries(sihua)) {
+    // 找该星所在宫
+    for (const [name, pos] of Object.entries(mainStars)) {
+      if (name === starName) {
+        stars[pos].hua[starName] = huaType;
+      }
+    }
+    // 也可能是辅星（文昌文曲左辅右弼）
+    const auxHuaStars = {...monthStars,...hourStars};
+    for (const [name, pos] of Object.entries(auxHuaStars)) {
+      if (name === starName) {
+        stars[pos].hua[starName] = huaType;
+      }
+    }
+  }
+
+  // ---- 渲染命盘 ----
+  renderChart({
+    y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
+    yearStem,yearBr,ju,
+    mingGongBrIdx,shenGongBrIdx,
+    palaceMap,palaceStemMap,
+    stars,sihua,mingzhu,shenzhu,gender,
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ============================================================
+//  渲染函数
+// ============================================================
+
+function renderChart(data) {
+  const {
+    y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
+    yearStem,yearBr,ju,
+    mingGongBrIdx,shenGongBrIdx,
+    palaceMap,palaceStemMap,
+    stars,sihua,mingzhu,shenzhu,gender,
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx
+  } = data;
+
+  // 初始化全局状态
+  _chartState = {
+    mingGongBrIdx, daXianData, lunarYear, lunarMonth, yearBrIdx, yearStemIdx,
+    hourBrIdx, gender,
+    activeDaXian: null, activeLiuNian: null
+  };
+
+  // 重置面板和高亮
+  const limitPanel = document.getElementById('limit-panel');
+  if (limitPanel) { limitPanel.style.display = 'none'; limitPanel.innerHTML = ''; }
+
+  // 大限查找表：brIdx → 大限序号
+  const brToDaXian = {};
+  daXianData.forEach((dx, n) => { brToDaXian[dx.brIdx] = n; });
+
+  const JU_NAMES = {2:'水二局',3:'木三局',4:'金四局',5:'土五局',6:'火六局'};
+  const HUA_CSS = {禄:'star-hua-lu',权:'star-hua-quan',科:'star-hua-ke',忌:'star-hua-ji'};
+  const HUA_SYM = {禄:'禄',权:'权',科:'科',忌:'忌'};
+
+  // 标题
+  document.getElementById('chart-title').textContent =
+    `${y}年${m}月${d}日（农历${lunarYear}年${lunarLeap?'闰':''}${lunarMonth}月${lunarDay}日）` +
+    ` ${yearStem}${yearBr}年 ${JU_NAMES[ju]} ${gender==='male'?'男':'女'}命`;
+
+  // 传统方形布局：顺时针从巳开始
+  // 外圈16宫格 + 中心2×2
+  // 布局顺序（地支索引）：
+  //   顶行（左→右）：巳5 午6 未7 申8
+  //   右列（上→下）：酉9 戌10
+  //   底行（右→左）：亥11 子0 丑1
+  //   左列（下→上）：卯3 寅2
+  // 实际 CSS grid 4×4，中心占 2×2
+
+  // grid 位置安排 (row, col) 1-indexed，中心(row2-3,col2-3)
+  const LAYOUT = [
+    // [地支索引, gridRow, gridCol, span?]
+    [5,  1, 1], // 巳
+    [6,  1, 2], // 午
+    [7,  1, 3], // 未
+    [8,  1, 4], // 申
+    [9,  2, 4], // 酉
+    [10, 3, 4], // 戌
+    [11, 4, 4], // 亥
+    [0,  4, 3], // 子
+    [1,  4, 2], // 丑
+    [2,  4, 1], // 寅
+    [3,  3, 1], // 卯
+    [4,  2, 1], // 辰
+    // 中心: row2-3, col2-3
+  ];
+
+  const grid = document.getElementById('chart-grid');
+  grid.innerHTML = '';
+
+  // 设置 grid 为 4×4
+  grid.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
+  grid.style.gridTemplateRows = 'auto auto auto auto';
+
+  function renderPalace(brIdx) {
+    const div = document.createElement('div');
+    div.className = 'palace';
+    div.id = `palace-${brIdx}`;
+    // 大限点击
+    const dxN = brToDaXian[brIdx];
+    if (dxN !== undefined) {
+      div.style.cursor = 'pointer';
+      div.addEventListener('click', () => selectDaXian(dxN));
+    }
+    const brName   = BRANCHES[brIdx];
+    const stemName = palaceStemMap[brIdx];
+    const palName  = palaceMap[brIdx] || '';
+    const isMing   = brIdx === mingGongBrIdx;
+    const isShen   = brIdx === shenGongBrIdx;
+
+    // 头部
+    const header = document.createElement('div');
+    header.className = 'palace-header';
+    header.innerHTML =
+      `<span class="palace-name">${palName}${isMing?'<span class="tag-ming">【命】</span>':''}${isShen?'<span class="tag-shen">【身】</span>':''}</span>` +
+      `<span class="palace-stem">${stemName}</span>` +
+      `<span class="palace-branch">${brName}</span>`;
+    div.appendChild(header);
+
+    // 主星
+    const mainDiv = document.createElement('div');
+    mainDiv.className = 'stars-main';
+    const starsInPalace = stars[brIdx];
+    let mainHTML = '';
+    for (const sName of starsInPalace.main) {
+      const huaType = starsInPalace.hua[sName];
+      if (huaType) {
+        mainHTML += `<span class="${HUA_CSS[huaType]}">${sName}${HUA_SYM[huaType]}</span> `;
+      } else {
+        mainHTML += `${sName} `;
+      }
+    }
+    mainDiv.innerHTML = mainHTML;
+    div.appendChild(mainDiv);
+
+    // 辅星
+    const auxDiv = document.createElement('div');
+    auxDiv.className = 'stars-aux';
+    let auxHTML = '';
+    for (const sName of starsInPalace.aux) {
+      const huaType = starsInPalace.hua[sName];
+      if (huaType) {
+        auxHTML += `<span class="${HUA_CSS[huaType]}">${sName}${HUA_SYM[huaType]}</span> `;
+      } else {
+        auxHTML += `${sName} `;
+      }
+    }
+    auxDiv.innerHTML = auxHTML;
+    div.appendChild(auxDiv);
+
+    // 大限年龄标签
+    if (dxN !== undefined) {
+      const dx = daXianData[dxN];
+      const dxDiv = document.createElement('div');
+      dxDiv.className = 'daxian-label';
+      dxDiv.textContent = `▶ ${dx.ageStart}–${dx.ageEnd}岁`;
+      div.appendChild(dxDiv);
+    }
+
+    return div;
+  }
+
+  // 渲染外圈宫格
+  for (const [brIdx, row, col] of LAYOUT) {
+    const div = renderPalace(brIdx);
+    div.style.gridRow = row;
+    div.style.gridColumn = col;
+    grid.appendChild(div);
+  }
+
+  // 渲染中心格
+  const center = document.createElement('div');
+  center.className = 'palace center';
+  center.style.gridRow = '2 / 4';
+  center.style.gridColumn = '2 / 4';
+  const JU_NAMES2 = {2:'水二局',3:'木三局',4:'金四局',5:'土五局',6:'火六局'};
+  center.innerHTML = `<div class="center-info">
+    <div class="ci-row">命主：<span class="ci-val">${mingzhu}</span></div>
+    <div class="ci-row">身主：<span class="ci-val">${shenzhu}</span></div>
+    <div class="ci-row">五行局：<span class="ci-val">${JU_NAMES2[ju]}</span></div>
+    <div class="ci-row">年干：<span class="ci-val">${yearStem}${yearBr}</span></div>
+    <hr style="border-color:#ddc880;margin:6px 0">
+    <div class="ci-row" style="font-size:0.78em;color:#5a3800">
+      化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
+      化权：<span class="star-hua-quan">${sihua['权']}</span><br>
+      化科：<span class="star-hua-ke">${sihua['科']}</span><br>
+      化忌：<span class="star-hua-ji">${sihua['忌']}</span>
+    </div>
+  </div>`;
+  grid.appendChild(center);
+
+  document.getElementById('chart-container').style.display = 'block';
+
+  // 保存 Rule2 所需状态
+  saveRule2State(palaceMap, stars, mingGongBrIdx);
+
+  // 显示解读按钮
+  document.getElementById('rule2-btn').style.display = 'block';
+  // 重置解读面板（重新排盘时关闭旧解读）
+  const r2panel = document.getElementById('rule2-panel');
+  r2panel.style.display = 'none';
+
+  // 命盘三方四正虚线（来源：rules_book1.md §三方四正定义）
+  requestAnimationFrame(() => drawOverlay('sanfang-svg', mingGongBrIdx, '#8b6914', 0.55));
+}
+
+// ============================================================
+//  Rule2 解盘引擎
+//  数据来源：《紫微斗数精成》（大德山人著）
+//  第八章：诸星落命宫参断（rule2_mingong.json）
+//  第九章：诸星落诸宫参断（rule2_other_palaces.json）
+// ============================================================
+
+// Rule2 全局缓存（排盘时存储）
+let _rule2State = null;
+
+// 排盘完成后保存必要状态供 Rule2 使用（在 renderChart 最后调用）
+function saveRule2State(palaceMap, stars, mingGongBrIdx) {
+  _rule2State = { palaceMap, stars, mingGongBrIdx };
+}
+
+// 宫名补全（ziwei.html内部宫名无"宫"后缀，除命宫外）
+const PALACE_SUFFIX_MAP = {
+  '命宫':'命宫','兄弟':'兄弟宫','夫妻':'夫妻宫','子女':'子女宫',
+  '财帛':'财帛宫','疾厄':'疾厄宫','迁移':'迁移宫','奴仆':'奴仆宫',
+  '官禄':'官禄宫','田宅':'田宅宫','福德':'福德宫','父母':'父母宫'
+};
+
+// 主星名 → JSON键名（加"星"）
+function toStarKey(name) {
+  const MAP = {
+    '紫微':'紫微星','天机':'天机星','太阳':'太阳星','武曲':'武曲星',
+    '天同':'天同星','廉贞':'廉贞星','天府':'天府星','太阴':'太阴星',
+    '贪狼':'贪狼星','巨门':'巨门星','天相':'天相星','天梁':'天梁星',
+    '七杀':'七杀星','破军':'破军星'
+  };
+  return MAP[name] || null;
+}
+
+// 查找单颗星在指定宫的解义
+function rule2Lookup(starName, palaceName, branchIdx) {
+  if (typeof RULE2_MINGONG === 'undefined' || typeof RULE2_OTHER === 'undefined') return null;
+  const starKey = toStarKey(starName);
+  if (!starKey) return null;
+  const branch = BRANCHES[branchIdx];
+
+  if (palaceName === '命宫') {
+    const data = RULE2_MINGONG[starKey];
+    if (!data) return null;
+    return data.branches?.[branch] || data.general || null;
+  } else {
+    const palaceKey = PALACE_SUFFIX_MAP[palaceName] || (palaceName + '宫');
+    const palaceData = RULE2_OTHER[palaceKey];
+    if (!palaceData) return null;
+    return palaceData[starKey] || null;
+  }
+}
+
+// 生成单个宫的解读 HTML
+function renderRule2Palace(branchIdx) {
+  if (!_rule2State) return '<div class="r2-no-data">请先排盘</div>';
+  const { palaceMap, stars } = _rule2State;
+  const palaceName = palaceMap[branchIdx];
+  const brName = BRANCHES[branchIdx];
+  const palaceStars = stars[branchIdx];
+  const mainStars = palaceStars.main;
+
+  if (mainStars.length === 0) {
+    // 空宫 - 显示对宫参考
+    const oppBr = (branchIdx + 6) % 12;
+    const oppStars = stars[oppBr].main;
+    let html = `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫</div>`;
+    html += `<div class="r2-text" style="color:#888">本宫无主星，以对宫（${BRANCHES[oppBr]}宫：${oppStars.join('、') || '亦空'}）参看。</div></div>`;
+    return html;
+  }
+
+  let html = '';
+  for (const star of mainStars) {
+    const text = rule2Lookup(star, palaceName, branchIdx);
+    const huaType = palaceStars.hua[star];
+    const huaLabel = huaType ? `<span class="star-hua-${{'禄':'lu','权':'quan','科':'ke','忌':'ji'}[huaType]}">${huaType}</span>` : '';
+    html += `<div class="r2-section">`;
+    html += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}</div>`;
+    if (text) {
+      html += `<div class="r2-text">${text.replace(/\s+/g, ' ')}</div>`;
+    } else {
+      html += `<div class="r2-no-data">本星落此宫无具体断语（书中未单独列出）。</div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+
+// 切换解读面板显示/隐藏
+function toggleRule2Panel() {
+  const panel = document.getElementById('rule2-panel');
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = 'block';
+    initRule2Tabs();
+    selectRule2Tab(0); // 默认显示命宫
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+// 初始化宫位标签
+function initRule2Tabs() {
+  if (!_rule2State) return;
+  const { palaceMap, mingGongBrIdx } = _rule2State;
+  const tabsEl = document.getElementById('r2-tabs');
+  tabsEl.innerHTML = '';
+
+  // 从命宫开始，逆时针顺序（即宫名顺序）
+  const PALACE_ORDER = ['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','奴仆','官禄','田宅','福德','父母'];
+  for (let i = 0; i < 12; i++) {
+    const brIdx = (mingGongBrIdx - i + 12) % 12;
+    const pName = palaceMap[brIdx];
+    const btn = document.createElement('button');
+    btn.className = 'r2-tab';
+    btn.dataset.brid = brIdx;
+    btn.textContent = pName + '（' + BRANCHES[brIdx] + '）';
+    btn.onclick = () => selectRule2Tab(i);
+    tabsEl.appendChild(btn);
+  }
+}
+
+// 选中某宫显示解读
+function selectRule2Tab(tabIdx) {
+  if (!_rule2State) return;
+  const { palaceMap, mingGongBrIdx } = _rule2State;
+  const brIdx = (mingGongBrIdx - tabIdx + 12) % 12;
+
+  document.querySelectorAll('.r2-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', i === tabIdx);
+  });
+  document.getElementById('r2-content').innerHTML = renderRule2Palace(brIdx);
+}
+
+</script>
+</body>
+</html>

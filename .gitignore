@@ -1,0 +1,16 @@
+books/
+rules/*.txt
+rules/*.json
+rules/rules_jingcheng_ch*.md
+rules/ziquan_raw.txt
+rules/ziquan_toc.txt
+rules/ziquan_b_sections.txt
+rules/ch12_14_find.txt
+rules/ch14_find.txt
+rules/pages_check.txt
+rules/toc_check.txt
+rules/vol2toc.txt
+rules/chapters_detail.txt
+rules/verification_for_notebooklm.md
+__pycache__/
+*.pyc
