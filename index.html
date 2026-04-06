@@ -1651,8 +1651,8 @@ function renderChart(data) {
     <div class="ci-row" style="font-size:0.78em;color:#5a3800">
       化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
       化权：<span class="star-hua-quan">${sihua['权']}</span><br>
-      化科：<span class="star-hua-ke">${sihua['科']}</span><br>
-      化忌：<span class="star-hua-ji">${sihua['忌']}</span>
+      化科：<span class="star-hua-ke">${sihua['科']}</span>${yearStem==='庚'?'<span style="color:#999;font-size:0.8em" title="《精成》用太阴，《创作原理》论证应为天府">⚠</span>':''}<br>
+      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${yearStem==='己'?'<span style="color:#999;font-size:0.8em" title="当前用文曲，《创作原理》论原始或为破军">⚠</span>':''}${yearStem==='辛'?'<span style="color:#999;font-size:0.8em" title="当前用文昌，《创作原理》论原始或为天梁">⚠</span>':''}
     </div>
   </div>`;
   grid.appendChild(center);
