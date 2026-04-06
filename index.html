@@ -1697,6 +1697,12 @@ const ALL_STAR_NAMES = [...MAIN_14, ...SHA_STARS, ...JI_STARS,
   '天月','天刑','天姚','天巫','天伤','天使','天才','天寿','阴煞','蜚廉','破碎',
   '红鸾','天喜','咸池','大耗','天虚','龙池','凤阁','三台','八座','恩光','天贵',
   '天哭','天虚','孤辰','寡宿','劫煞','华盖','解神','天德','月德'];
+// 星曜简称→全称映射（用于条件匹配）
+const STAR_ABBR = {
+  '左右': ['左辅','右弼'], '昌曲': ['文昌','文曲'],
+  '羊陀': ['擎羊','陀罗'], '火铃': ['火星','铃星'],
+  '空劫': ['地空','地劫'], '辅弼': ['左辅','右弼'],
+};
 
 // 收集本宫及三方四正的所有星曜和四化
 function collectSFSZ(branchIdx, stars) {
@@ -1736,11 +1742,22 @@ function collectSFSZ(branchIdx, stars) {
 // 返回: true=条件成立或无条件, false=条件不成立
 function checkClauseCondition(clause, ctx) {
   const { localStars, sfszStars, allHua } = ctx;
-  // ---- 检测具体星名 + "同"/"同宫"/"同度" = 本宫有该星 ----
-  // 例："陀罗同" "天月同主便血" "再与紫微同" "右弼同度"
-  const reStarTong = /(再与|与)?([\u4e00-\u9fff]{2,3})(同宫|同度|同)/g;
   let m;
   let hasCondition = false;
+
+  // ---- 年干条件："X生人" / "X年生人" ----
+  if (ctx.yearStem) {
+    const reStem = /([甲乙丙丁戊己庚辛壬癸])(?:年)?生人/g;
+    let stemFound = false, stemMatch = false;
+    while ((m = reStem.exec(clause)) !== null) {
+      stemFound = true;
+      if (m[1] === ctx.yearStem) stemMatch = true;
+    }
+    if (stemFound && !stemMatch) return false;
+  }
+
+  // ---- 检测具体星名 + "同"/"同宫"/"同度" = 本宫有该星 ----
+  const reStarTong = /(再与|与)?([\u4e00-\u9fff]{2,3})(同宫|同度|同)/g;
   while ((m = reStarTong.exec(clause)) !== null) {
     const starName = m[2];
     if (ALL_STAR_NAMES.includes(starName)) {
@@ -1748,9 +1765,9 @@ function checkClauseCondition(clause, ctx) {
       if (!localStars.has(starName)) return false;
     }
   }
-  // ---- 检测 "XX化忌/禄/权/科" ----
-  // 注意：前面可能有"见/遇/逢"等前缀，需要排除以免贪婪匹配到前缀字
-  const reHua = /(?:^|[，。；\s见遇逢与加])([\u4e00-\u9fff]{2})化(忌|禄|权|科)/g;
+
+  // ---- 检测 "XX化忌/禄/权/科"（含"太阳在子宫化忌"、"会廉贞化忌"等）----
+  const reHua = /([\u4e00-\u9fff]{2})(?:在[子丑寅卯辰巳午未申酉戌亥]\s*宫?\s*)?化(忌|禄|权|科)/g;
   while ((m = reHua.exec(clause)) !== null) {
     const starName = m[1];
     const huaType = m[2];
@@ -1759,6 +1776,7 @@ function checkClauseCondition(clause, ctx) {
       if (allHua[starName] !== huaType) return false;
     }
   }
+
   // ---- "加吉" = 本宫/三方有吉星 ----
   if (/加吉/.test(clause)) {
     hasCondition = true;
@@ -1774,21 +1792,24 @@ function checkClauseCondition(clause, ctx) {
     hasCondition = true;
     if (!KONG_STARS.some(s => localStars.has(s))) return false;
   }
-  // ---- "加火铃" / "火铃同" / "见火铃" ----
-  if (/(?:加|逢|见|遇)火铃|火铃(?:同|守)/.test(clause)) {
-    hasCondition = true;
-    if (!localStars.has('火星') && !localStars.has('铃星')) return false;
+
+  // ---- 星曜简称条件："加/会/逢/与 左右/昌曲/火铃/羊陀/空劫" 及 "昌曲同/夹" ----
+  for (const [abbr, fullNames] of Object.entries(STAR_ABBR)) {
+    // 匹配多种模式：加会昌曲、逢左右、与左右昌曲会、昌曲同、昌曲夹、并昌曲
+    const reAbbr = new RegExp('(?:(?:加会?|逢|见|遇|与|会|并)[^。]*?' + abbr + '|' + abbr + '(?:同宫?|同度|守照?|会照?|夹|并))');
+    if (reAbbr.test(clause)) {
+      hasCondition = true;
+      if (!fullNames.some(s => sfszStars.has(s))) return false;
+    }
   }
-  // ---- "加羊陀" / "羊陀同" ----
-  if (/(?:加|逢|见)羊陀|羊陀(?:同|守)/.test(clause)) {
+
+  // ---- 单星条件（禄存、文昌等），含"见化禄、禄存"等列举模式 ----
+  const reSingleMeet = /(?:加会?|逢|见|遇|会)[^。；]*?(禄存|文昌|文曲|左辅|右弼|天魁|天钺|天马)/g;
+  while ((m = reSingleMeet.exec(clause)) !== null) {
     hasCondition = true;
-    if (!localStars.has('擎羊') && !localStars.has('陀罗')) return false;
+    if (!sfszStars.has(m[1])) return false;
   }
-  // ---- "加空劫" / "空劫同" ----
-  if (/(?:加|逢|见)空劫|空劫(?:同|守)/.test(clause)) {
-    hasCondition = true;
-    if (!localStars.has('地空') && !localStars.has('地劫')) return false;
-  }
+
   // ---- "XX来会" / "XX...来会" = XX在三方四正 ----
   const reHui = /([\u4e00-\u9fff]{2,3})(?:带煞或化忌)?来会/g;
   while ((m = reHui.exec(clause)) !== null) {
@@ -1805,7 +1826,6 @@ function checkClauseCondition(clause, ctx) {
     const starName = mc[1];
     hasCondition = true;
     const starInSFSZ = sfszStars.has(starName);
-    // "XX带煞"：XX所在宫位有煞星同宫
     const starPalace = ctx.getPalaceOf(starName);
     const hasShaWithStar = starPalace && SHA_STARS.some(s => starPalace.has(s));
     const hasHuaJi = allHua[starName] === '忌';
@@ -1817,7 +1837,7 @@ function checkClauseCondition(clause, ctx) {
     const peachStars = ['红鸾','天喜','咸池','天姚'];
     if (!peachStars.some(s => sfszStars.has(s))) return false;
   }
-  // ---- "加擎羊" / "加陀罗" / "加火星" 等单星条件 ----
+  // ---- "加擎羊" / "加陀罗" / "加火星" 等���煞星条件 ----
   const reSingleSha = /(?:加|逢|见|遇)(擎羊|陀罗|火星|铃星|地空|地劫)/g;
   while ((m = reSingleSha.exec(clause)) !== null) {
     hasCondition = true;
@@ -1899,7 +1919,12 @@ function checkBranchCondition(clause, currentBranch) {
 function filterRuleText(text, branchIdx, stars) {
   if (!text || !stars) return text;
   const ctx = collectSFSZ(branchIdx, stars);
+  // 附加年干信息到 ctx（用于"X生人"条件过滤）
+  if (_chartState) ctx.yearStem = STEMS[_chartState.yearStemIdx];
   const currentBranch = BRANCHES[branchIdx];
+
+  // 第零步：清理页码残留（OCR产生的独立数字如 "230" "381"）
+  text = text.replace(/\s+\d{3}\s+/g, ' ');
 
   // 第一步：过滤不匹配的地支段落（△/◇ 标题段落）
   let filtered = filterBranchSections(text, currentBranch);
