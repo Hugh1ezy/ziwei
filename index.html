@@ -1745,6 +1745,17 @@ function checkClauseCondition(clause, ctx) {
   let m;
   let hasCondition = false;
 
+  // ---- 隐含四化条件："化禄，..." / "化权，..." / "化忌，..." 开头的句子 ----
+  // 当句首直接写 "化X，" 时，暗指当前主星的四化
+  if (ctx.currentStar) {
+    const reImplicitHua = /^\s*化(禄|权|科|忌)[，,]/;
+    const mih = clause.match(reImplicitHua);
+    if (mih) {
+      const huaType = mih[1];
+      if (allHua[ctx.currentStar] !== huaType) return false;
+    }
+  }
+
   // ---- 年干条件："X生人" / "X年生人" ----
   if (ctx.yearStem) {
     const reStem = /([甲乙丙丁戊己庚辛壬癸])(?:年)?生人/g;
@@ -1889,10 +1900,10 @@ function filterBranchSections(text, currentBranch) {
 function checkBranchCondition(clause, currentBranch) {
   const trimmed = clause.trim();
 
-  // 模式1："午宫，..." 句首地支 + 宫 — 只保留匹配当前地支的
-  const reBranchStart = /^([子丑寅卯辰巳午未申酉戌亥])宫[，,]/;
+  // 模式1："午宫，..." 或 "子午宫，" 或 "辰戌宫，" 句首地支+宫
+  const reBranchStart = /^([子丑寅卯辰巳午未申酉戌亥]{1,4})宫[，,]/;
   const m1 = trimmed.match(reBranchStart);
-  if (m1 && m1[1] !== currentBranch) return false;
+  if (m1 && !m1[1].includes(currentBranch)) return false;
 
   // 模式2："XX在午守命" / "XX在午宫守命" / "XX在午坐命" — 星在特定宫位
   const reStarAtBranch = /在([子丑寅卯辰巳午未申酉戌亥])(?:\s*宫)?\s*(?:守\s*命|坐\s*命)/;
@@ -1916,11 +1927,13 @@ function checkBranchCondition(clause, currentBranch) {
 }
 
 // 过滤规则文本：只保留与命盘匹配的条件句
-function filterRuleText(text, branchIdx, stars) {
+function filterRuleText(text, branchIdx, stars, currentStar) {
   if (!text || !stars) return text;
   const ctx = collectSFSZ(branchIdx, stars);
   // 附加年干信息到 ctx（用于"X生人"条件过滤）
   if (_chartState) ctx.yearStem = STEMS[_chartState.yearStemIdx];
+  // 附加当前主星名（用于隐含四化过滤：句首"化禄，"暗指当前主星）
+  if (currentStar) ctx.currentStar = currentStar;
   const currentBranch = BRANCHES[branchIdx];
 
   // 第零步：清理页码残留（OCR产生的独立数字如 "230" "381"）
@@ -1938,6 +1951,13 @@ function filterRuleText(text, branchIdx, stars) {
 
     // 先检查句子级地支条件
     if (!checkBranchCondition(sentence, currentBranch)) continue;
+
+    // 先检查整句级的隐含四化条件（"化禄，..."开头 → 整句移除）
+    const reWholeHua = /^\s*化(禄|权|科|忌)[，,]/;
+    const wholeHuaMatch = sentence.trim().match(reWholeHua);
+    if (wholeHuaMatch && ctx.currentStar) {
+      if (ctx.allHua[ctx.currentStar] !== wholeHuaMatch[1]) continue; // 整句跳过
+    }
 
     // 对含分号的句子，按分号拆子句
     if (sentence.includes('；')) {
@@ -2035,7 +2055,7 @@ function renderRule2Palace(branchIdx) {
     if (text) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
       // 根据命盘实际星曜过滤不适用的条件句
-      const filtered = filterRuleText(cleaned, branchIdx, stars);
+      const filtered = filterRuleText(cleaned, branchIdx, stars, star);
       // 超过600字的视为通用大段落，只展示前500字并提供展开
       if (filtered.length > 600) {
         const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
