@@ -957,6 +957,9 @@ function selectDaXian(n) {
   const activeEl = document.getElementById(`palace-${dx.brIdx}`);
   if (activeEl) activeEl.classList.add('daxian-active');
 
+  // 移除命盘初始三方四正线，只显示当前点击宫位的线条
+  const sanfangSvg = document.getElementById('sanfang-svg');
+  if (sanfangSvg) sanfangSvg.remove();
   drawOverlay('daxian-svg', dx.brIdx, '#0055bb', 0.65);
   ['liunian-svg','liuyue-svg','liuri-svg','liushi-svg'].forEach(id => { const e = document.getElementById(id); if(e) e.remove(); });
 
