@@ -1701,10 +1701,14 @@ const ALL_STAR_NAMES = [...MAIN_14, ...SHA_STARS, ...JI_STARS,
   '红鸾','天喜','咸池','大耗','天虚','龙池','凤阁','三台','八座','恩光','天贵',
   '天哭','天虚','孤辰','寡宿','劫煞','华盖','解神','天德','月德'];
 // 星曜简称→全称映射（用于条件匹配）
+// 标准对：两星都需在场；非标准组合同理
 const STAR_ABBR = {
   '左右': ['左辅','右弼'], '昌曲': ['文昌','文曲'],
   '羊陀': ['擎羊','陀罗'], '火铃': ['火星','铃星'],
   '空劫': ['地空','地劫'], '辅弼': ['左辅','右弼'],
+  '铃陀': ['铃星','陀罗'], '火羊': ['火星','擎羊'],
+  '羊火': ['擎羊','火星'], '铃星陀罗': ['铃星','陀罗'],
+  '羊刑': ['擎羊','天刑'],
 };
 
 // 收集本宫及三方四正的所有星曜和四化
@@ -1749,13 +1753,41 @@ function checkClauseCondition(clause, ctx) {
   let hasCondition = false;
 
   // ---- 隐含四化条件："化禄，..." / "化权，..." / "化忌，..." 开头的句子 ----
-  // 当句首直接写 "化X，" 时，暗指当前主星的四化
   if (ctx.currentStar) {
     const reImplicitHua = /^\s*化(禄|权|科|忌)[，,]/;
     const mih = clause.match(reImplicitHua);
     if (mih) {
-      const huaType = mih[1];
-      if (allHua[ctx.currentStar] !== huaType) return false;
+      if (allHua[ctx.currentStar] !== mih[1]) return false;
+    }
+  }
+
+  // ---- 庙旺/失陷条件 ----
+  // "失陷，..." 开头 → 暗指当前主星失陷（庙旺等级0）
+  if (ctx.currentStar && ctx.branchIdx !== undefined) {
+    const reImplicitMW = /^\s*失陷[，,]/;
+    if (reImplicitMW.test(clause.trim())) {
+      const mwArr = MIAO_WANG[ctx.currentStar];
+      if (mwArr && mwArr[ctx.branchIdx] > 0) return false; // 非失陷则过滤
+    }
+    // "庙旺，..." 开头 → 暗指当前主星庙旺（等级2或3）
+    const reImplicitMiao = /^\s*庙旺[，,]/;
+    if (reImplicitMiao.test(clause.trim())) {
+      const mwArr = MIAO_WANG[ctx.currentStar];
+      if (mwArr && mwArr[ctx.branchIdx] < 2) return false;
+    }
+  }
+  // "若XX失陷" / "若XX庙旺" → 检查具体星的庙旺
+  const reStarMW = /若([\u4e00-\u9fff]{2})(?:星)?失陷/;
+  const mwm = clause.match(reStarMW);
+  if (mwm && MAIN_14.includes(mwm[1])) {
+    hasCondition = true;
+    // 找该星所在宫位，检查庙旺
+    for (let i = 0; i < 12; i++) {
+      if (ctx._stars && ctx._stars[i].main.includes(mwm[1])) {
+        const mwArr = MIAO_WANG[mwm[1]];
+        if (mwArr && mwArr[i] > 0) return false; // 非失陷
+        break;
+      }
     }
   }
 
@@ -1935,8 +1967,10 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   const ctx = collectSFSZ(branchIdx, stars);
   // 附加年干信息到 ctx（用于"X生人"条件过滤）
   if (_chartState) ctx.yearStem = STEMS[_chartState.yearStemIdx];
-  // 附加当前主星名（用于隐含四化过滤：句首"化禄，"暗指当前主星）
+  // 附加当前主星名（用于隐含四化/庙旺过滤）
   if (currentStar) ctx.currentStar = currentStar;
+  ctx.branchIdx = branchIdx;
+  ctx._stars = stars;
   const currentBranch = BRANCHES[branchIdx];
 
   // 第零步：清理页码残留（OCR产生的独立数字如 "230" "381"）
