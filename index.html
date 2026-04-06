@@ -1651,8 +1651,8 @@ function renderChart(data) {
     <div class="ci-row" style="font-size:0.78em;color:#5a3800">
       化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
       化权：<span class="star-hua-quan">${sihua['权']}</span><br>
-      化科：<span class="star-hua-ke">${sihua['科']}</span>${yearStem==='庚'?'<span style="color:#999;font-size:0.8em" title="《精成》用太阴，《创作原理》论证应为天府">⚠</span>':''}<br>
-      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${yearStem==='己'?'<span style="color:#999;font-size:0.8em" title="当前用文曲，《创作原理》论原始或为破军">⚠</span>':''}${yearStem==='辛'?'<span style="color:#999;font-size:0.8em" title="当前用文昌，《创作原理》论原始或为天梁">⚠</span>':''}
+      化科：<span class="star-hua-ke">${sihua['科']}</span>${yearStem==='庚'?'<span style="color:#888;font-size:0.75em">，一说天府（《创作原理》）</span>':''}<br>
+      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${yearStem==='己'?'<span style="color:#888;font-size:0.75em">，一说破军（《创作原理》）</span>':''}${yearStem==='辛'?'<span style="color:#888;font-size:0.75em">，一说天梁（《创作原理》）</span>':''}
     </div>
   </div>`;
   grid.appendChild(center);
@@ -2020,6 +2020,24 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   return result.join('');
 }
 
+// 四化争议标注：在解盘文本中遇到争议四化时插入来源说明
+// 格式："A条件，B内容，一说C内容（来源：xxx）"
+const SIHUA_CONFLICTS = {
+  '庚': { type: '科', main: '太阴', mainSrc: '《精成》', alts: [{star:'天府', src:'《创作原理》'}] },
+  '己': { type: '忌', main: '文曲', mainSrc: '《精成》', alts: [{star:'破军', src:'《创作原理》'}] },
+  '辛': { type: '忌', main: '文昌', mainSrc: '《精成》', alts: [{star:'天梁', src:'《创作原理》'}] },
+};
+function annotateConflicts(text, yearStem) {
+  if (!yearStem || !SIHUA_CONFLICTS[yearStem]) return text;
+  const c = SIHUA_CONFLICTS[yearStem];
+  const huaChar = {'禄':'禄','权':'权','科':'科','忌':'忌'}[c.type];
+  // 在文本中找 "主星化X" 并追加说明
+  const mainRe = new RegExp('(' + c.main + '化' + huaChar + ')', 'g');
+  const altNote = c.alts.map(a => '一说' + a.star + '化' + huaChar + '（' + a.src + '）').join('，');
+  text = text.replace(mainRe, '$1（' + c.mainSrc + '，' + altNote + '）');
+  return text;
+}
+
 // 宫名补全（ziwei.html内部宫名无"宫"后缀，除命宫外）
 const PALACE_SUFFIX_MAP = {
   '命宫':'命宫','兄弟':'兄弟宫','夫妻':'夫妻宫','子女':'子女宫',
@@ -2089,7 +2107,9 @@ function renderRule2Palace(branchIdx) {
     if (text) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
       // 根据命盘实际星曜过滤不适用的条件句
-      const filtered = filterRuleText(cleaned, branchIdx, stars, star);
+      let filtered = filterRuleText(cleaned, branchIdx, stars, star);
+      // 四化争议标注
+      if (_chartState) filtered = annotateConflicts(filtered, STEMS[_chartState.yearStemIdx]);
       // 超过600字的视为通用大段落，只展示前500字并提供展开
       if (filtered.length > 600) {
         const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
