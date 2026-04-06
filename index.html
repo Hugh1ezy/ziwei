@@ -1762,18 +1762,15 @@ function checkClauseCondition(clause, ctx) {
   }
 
   // ---- 庙旺/失陷条件 ----
-  // "失陷，..." 开头 → 暗指当前主星失陷（庙旺等级0）
   if (ctx.currentStar && ctx.branchIdx !== undefined) {
-    const reImplicitMW = /^\s*失陷[，,]/;
-    if (reImplicitMW.test(clause.trim())) {
-      const mwArr = MIAO_WANG[ctx.currentStar];
-      if (mwArr && mwArr[ctx.branchIdx] > 0) return false; // 非失陷则过滤
-    }
-    // "庙旺，..." 开头 → 暗指当前主星庙旺（等级2或3）
-    const reImplicitMiao = /^\s*庙旺[，,]/;
-    if (reImplicitMiao.test(clause.trim())) {
-      const mwArr = MIAO_WANG[ctx.currentStar];
-      if (mwArr && mwArr[ctx.branchIdx] < 2) return false;
+    const mwArr = MIAO_WANG[ctx.currentStar];
+    const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 3庙2旺1得0陷
+    if (mwLevel >= 0) {
+      const t = clause.trim();
+      // "失陷，/则/..." 或 "陷地，/..." 开头 → 等级须为0
+      if (/^(?:失陷|陷地)[，,则]/.test(t) && mwLevel > 0) return false;
+      // "庙旺，/则/有/可/..." 开头 → 等级须>=2
+      if (/^庙旺[，,则有可主]/.test(t) && mwLevel < 2) return false;
     }
   }
   // "若XX失陷" / "若XX庙旺" → 检查具体星的庙旺
