@@ -32,8 +32,9 @@
 
 ```bash
 # Claude 执行：暂存改动的文件（不用 git add . 或 git add books/）
-git add ziwei.html                                          # 如有修改
+git add index.html ziwei.html                              # 如有修改
 git add rules/rules_paiping.md rules/rules_jiedu.md        # 如有修改
+git add rules/rule2_data.js                                # 如有修改
 git add memory_log.md instructions.md                      # 如有修改
 
 # 提交（含 Co-Author 标注）

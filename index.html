@@ -1687,6 +1687,260 @@ function saveRule2State(palaceMap, stars, mingGongBrIdx) {
   _rule2State = { palaceMap, stars, mingGongBrIdx };
 }
 
+// ---- 星曜分类（用于解读过滤）----
+const SHA_STARS  = ['火星','铃星','擎羊','陀罗','地空','地劫'];
+const JI_STARS   = ['左辅','右弼','天魁','天钺','文昌','文曲','禄存','天马'];
+const KONG_STARS = ['地空','地劫','截空','旬空'];
+const MAIN_14 = ['紫微','天机','太阳','武曲','天同','廉贞','天府','太阴','贪狼','巨门','天相','天梁','七杀','破军'];
+// 所有可能在条件句中出现的星名（主星+常见辅星）
+const ALL_STAR_NAMES = [...MAIN_14, ...SHA_STARS, ...JI_STARS,
+  '天月','天刑','天姚','天巫','天伤','天使','天才','天寿','阴煞','蜚廉','破碎',
+  '红鸾','天喜','咸池','大耗','天虚','龙池','凤阁','三台','八座','恩光','天贵',
+  '天哭','天虚','孤辰','寡宿','劫煞','华盖','解神','天德','月德'];
+
+// 收集本宫及三方四正的所有星曜和四化
+function collectSFSZ(branchIdx, stars) {
+  const self  = branchIdx;
+  const opp   = (branchIdx + 6) % 12;  // 对宫
+  const tri1  = (branchIdx - 4 + 12) % 12;
+  const tri2  = (branchIdx - 8 + 12) % 12;
+  const localStars  = new Set();  // 本宫星曜
+  const sfszStars   = new Set();  // 三方四正全部（含本宫）
+  const allHua      = {};         // 星名→化类型（三方四正范围）
+  const palaceSets  = {};         // 每宫的星曜集合，用于检查"XX带煞"
+  // 本宫
+  const sp = stars[self];
+  const selfSet = new Set([...sp.main, ...sp.aux]);
+  palaceSets[self] = selfSet;
+  selfSet.forEach(s => { localStars.add(s); sfszStars.add(s); });
+  Object.assign(allHua, sp.hua);
+  // 三方其余三宫
+  for (const idx of [opp, tri1, tri2]) {
+    const p = stars[idx];
+    const pSet = new Set([...p.main, ...p.aux]);
+    palaceSets[idx] = pSet;
+    pSet.forEach(s => sfszStars.add(s));
+    Object.assign(allHua, p.hua);
+  }
+  // 查找某星所在宫位的星曜集合
+  function getPalaceOf(starName) {
+    for (const idx of [self, opp, tri1, tri2]) {
+      if (palaceSets[idx].has(starName)) return palaceSets[idx];
+    }
+    return null;
+  }
+  return { localStars, sfszStars, allHua, oppIdx: opp, getPalaceOf };
+}
+
+// 检测子句中的条件是否在命盘中成立
+// 返回: true=条件成立或无条件, false=条件不成立
+function checkClauseCondition(clause, ctx) {
+  const { localStars, sfszStars, allHua } = ctx;
+  // ---- 检测具体星名 + "同"/"同宫"/"同度" = 本宫有该星 ----
+  // 例："陀罗同" "天月同主便血" "再与紫微同" "右弼同度"
+  const reStarTong = /(再与|与)?([\u4e00-\u9fff]{2,3})(同宫|同度|同)/g;
+  let m;
+  let hasCondition = false;
+  while ((m = reStarTong.exec(clause)) !== null) {
+    const starName = m[2];
+    if (ALL_STAR_NAMES.includes(starName)) {
+      hasCondition = true;
+      if (!localStars.has(starName)) return false;
+    }
+  }
+  // ---- 检测 "XX化忌/禄/权/科" ----
+  // 注意：前面可能有"见/遇/逢"等前缀，需要排除以免贪婪匹配到前缀字
+  const reHua = /(?:^|[，。；\s见遇逢与加])([\u4e00-\u9fff]{2})化(忌|禄|权|科)/g;
+  while ((m = reHua.exec(clause)) !== null) {
+    const starName = m[1];
+    const huaType = m[2];
+    if (ALL_STAR_NAMES.includes(starName) || MAIN_14.includes(starName)) {
+      hasCondition = true;
+      if (allHua[starName] !== huaType) return false;
+    }
+  }
+  // ---- "加吉" = 本宫/三方有吉星 ----
+  if (/加吉/.test(clause)) {
+    hasCondition = true;
+    if (!JI_STARS.some(s => sfszStars.has(s))) return false;
+  }
+  // ---- "加煞" / "带煞" / "逢煞" / "煞星" (泛指) ----
+  if (/(?:加|带|逢|见)煞|煞星(?:多|同|守|冲)/.test(clause)) {
+    hasCondition = true;
+    if (!SHA_STARS.some(s => sfszStars.has(s))) return false;
+  }
+  // ---- "逢空露" / "空露" / "逢空劫" ----
+  if (/空露|逢空劫/.test(clause)) {
+    hasCondition = true;
+    if (!KONG_STARS.some(s => localStars.has(s))) return false;
+  }
+  // ---- "加火铃" / "火铃同" / "见火铃" ----
+  if (/(?:加|逢|见|遇)火铃|火铃(?:同|守)/.test(clause)) {
+    hasCondition = true;
+    if (!localStars.has('火星') && !localStars.has('铃星')) return false;
+  }
+  // ---- "加羊陀" / "羊陀同" ----
+  if (/(?:加|逢|见)羊陀|羊陀(?:同|守)/.test(clause)) {
+    hasCondition = true;
+    if (!localStars.has('擎羊') && !localStars.has('陀罗')) return false;
+  }
+  // ---- "加空劫" / "空劫同" ----
+  if (/(?:加|逢|见)空劫|空劫(?:同|守)/.test(clause)) {
+    hasCondition = true;
+    if (!localStars.has('地空') && !localStars.has('地劫')) return false;
+  }
+  // ---- "XX来会" / "XX...来会" = XX在三方四正 ----
+  const reHui = /([\u4e00-\u9fff]{2,3})(?:带煞或化忌)?来会/g;
+  while ((m = reHui.exec(clause)) !== null) {
+    const starName = m[1];
+    if (ALL_STAR_NAMES.includes(starName) || MAIN_14.includes(starName)) {
+      hasCondition = true;
+      if (!sfszStars.has(starName)) return false;
+    }
+  }
+  // ---- 复合："如遇XX带煞或化忌来会" ----
+  const reComplex = /如遇([\u4e00-\u9fff]{2,3})带煞或化忌来会/;
+  const mc = clause.match(reComplex);
+  if (mc) {
+    const starName = mc[1];
+    hasCondition = true;
+    const starInSFSZ = sfszStars.has(starName);
+    // "XX带煞"：XX所在宫位有煞星同宫
+    const starPalace = ctx.getPalaceOf(starName);
+    const hasShaWithStar = starPalace && SHA_STARS.some(s => starPalace.has(s));
+    const hasHuaJi = allHua[starName] === '忌';
+    if (!starInSFSZ || (!hasShaWithStar && !hasHuaJi)) return false;
+  }
+  // ---- "加桃花星" ----
+  if (/加桃花|见桃花/.test(clause)) {
+    hasCondition = true;
+    const peachStars = ['红鸾','天喜','咸池','天姚'];
+    if (!peachStars.some(s => sfszStars.has(s))) return false;
+  }
+  // ---- "加擎羊" / "加陀罗" / "加火星" 等单星条件 ----
+  const reSingleSha = /(?:加|逢|见|遇)(擎羊|陀罗|火星|铃星|地空|地劫)/g;
+  while ((m = reSingleSha.exec(clause)) !== null) {
+    hasCondition = true;
+    if (!sfszStars.has(m[1])) return false;
+  }
+
+  return true; // 无条件或条件成立
+}
+
+// 地支配对表（紫微斗数中子午、丑未等对宫共用同一段文本）
+const BRANCH_PAIRS = {
+  '子':'子午','丑':'丑未','寅':'寅申','卯':'卯酉','辰':'辰戌','巳':'巳亥',
+  '午':'子午','未':'丑未','申':'寅申','酉':'卯酉','戌':'辰戌','亥':'巳亥'
+};
+
+// 检查地支引用是否包含当前地支
+function branchRefMatches(refText, currentBranch) {
+  // refText 如 "子午宫" "丑未" "午宫" "子宫"
+  // 检查是否包含当前地支
+  return refText.includes(currentBranch);
+}
+
+// 第一步：按 △/◇ 标题段落过滤不匹配的地支段落
+function filterBranchSections(text, currentBranch) {
+  // 按 △ 或 ◇ 分段（保留分隔符）
+  const parts = text.split(/(?=[△◇])/);
+  const kept = [];
+  for (const part of parts) {
+    if (!part.trim()) continue;
+    // 检查是否以 △ 或 ◇ 开头
+    if (/^[△◇]/.test(part)) {
+      // 方式1：标题直接含地支 如 "△子午宫入庙" "△丑未旺地"
+      const headerMatch = part.match(/^[△◇]\s*([子丑寅卯辰巳午未申酉戌亥]{1,4})(?:宫|旺|入|得|平|陷|，)/);
+      if (headerMatch) {
+        if (!headerMatch[1].includes(currentBranch)) continue;
+      } else {
+        // 方式2：标题是格局名 如 "◇日月并明格"，检查内容中的"在X坐命/X宫安命"
+        // 注意：原文排版可能在"坐"和"命"之间有空格
+        const contentBranch = part.match(/在([子丑寅卯辰巳午未申酉戌亥])(?:\s*宫)?\s*(?:坐\s*命|守\s*命|安\s*命)/);
+        if (contentBranch && contentBranch[1] !== currentBranch) continue;
+      }
+    }
+    kept.push(part);
+  }
+  return kept.join('');
+}
+
+// 第二步：过滤句子级的地支引用
+function checkBranchCondition(clause, currentBranch) {
+  const trimmed = clause.trim();
+
+  // 模式1："午宫，..." 句首地支 + 宫 — 只保留匹配当前地支的
+  const reBranchStart = /^([子丑寅卯辰巳午未申酉戌亥])宫[，,]/;
+  const m1 = trimmed.match(reBranchStart);
+  if (m1 && m1[1] !== currentBranch) return false;
+
+  // 模式2："XX在午守命" / "XX在午宫守命" / "XX在午坐命" — 星在特定宫位
+  const reStarAtBranch = /在([子丑寅卯辰巳午未申酉戌亥])(?:\s*宫)?\s*(?:守\s*命|坐\s*命)/;
+  const m2 = clause.match(reStarAtBranch);
+  if (m2 && m2[1] !== currentBranch) return false;
+
+  // 模式3："XX在丑未" / "XX在子午宫" — 星在特定宫位对
+  const reStarAtPair = /在([子丑寅卯辰巳午未申酉戌亥]{2,4})(?:宫)?[，,]/;
+  const m3 = clause.match(reStarAtPair);
+  if (m3) {
+    const ref = m3[1];
+    if (!ref.includes(currentBranch)) return false;
+  }
+
+  // 模式4："X宫安命" — 如 "丑宫安命"
+  const reAnMing = /([子丑寅卯辰巳午未申酉戌亥])\s*宫\s*安\s*命/;
+  const m4 = clause.match(reAnMing);
+  if (m4 && m4[1] !== currentBranch) return false;
+
+  return true;
+}
+
+// 过滤规则文本：只保留与命盘匹配的条件句
+function filterRuleText(text, branchIdx, stars) {
+  if (!text || !stars) return text;
+  const ctx = collectSFSZ(branchIdx, stars);
+  const currentBranch = BRANCHES[branchIdx];
+
+  // 第一步：过滤不匹配的地支段落（△/◇ 标题段落）
+  let filtered = filterBranchSections(text, currentBranch);
+
+  // 第二步：按句号拆成句子，逐句过滤
+  const sentences = filtered.split(/(?<=。)/);
+  const result = [];
+
+  for (const sentence of sentences) {
+    if (!sentence.trim()) continue;
+
+    // 先检查句子级地支条件
+    if (!checkBranchCondition(sentence, currentBranch)) continue;
+
+    // 对含分号的句子，按分号拆子句
+    if (sentence.includes('；')) {
+      const clauses = sentence.split(/(?<=；)/);
+      const kept = [];
+      for (const clause of clauses) {
+        if (!clause.trim()) continue;
+        if (!checkBranchCondition(clause, currentBranch)) continue;
+        if (checkClauseCondition(clause, ctx)) {
+          kept.push(clause);
+        }
+      }
+      if (kept.length > 0) {
+        let joined = kept.join('');
+        joined = joined.replace(/^；/, '');
+        result.push(joined);
+      }
+    } else {
+      // 无分号的完整句子
+      if (checkClauseCondition(sentence, ctx)) {
+        result.push(sentence);
+      }
+    }
+  }
+
+  return result.join('');
+}
+
 // 宫名补全（ziwei.html内部宫名无"宫"后缀，除命宫外）
 const PALACE_SUFFIX_MAP = {
   '命宫':'命宫','兄弟':'兄弟宫','夫妻':'夫妻宫','子女':'子女宫',
@@ -1755,22 +2009,24 @@ function renderRule2Palace(branchIdx) {
     html += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}</div>`;
     if (text) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
+      // 根据命盘实际星曜过滤不适用的条件句
+      const filtered = filterRuleText(cleaned, branchIdx, stars);
       // 超过600字的视为通用大段落，只展示前500字并提供展开
-      if (cleaned.length > 600) {
+      if (filtered.length > 600) {
         const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
-        const excerpt = cleaned.slice(0, 500);
+        const excerpt = filtered.slice(0, 500);
         html += `<div class="r2-text">
           <span id="${uid}_short">${excerpt}…… <button class="r2-expand-btn" onclick="
             document.getElementById('${uid}_short').style.display='none';
             document.getElementById('${uid}_full').style.display='block'
           ">展开完整</button></span>
-          <span id="${uid}_full" style="display:none">${cleaned} <button class="r2-expand-btn" onclick="
+          <span id="${uid}_full" style="display:none">${filtered} <button class="r2-expand-btn" onclick="
             document.getElementById('${uid}_full').style.display='none';
             document.getElementById('${uid}_short').style.display='inline'
           ">收起</button></span>
         </div>`;
       } else {
-        html += `<div class="r2-text">${cleaned}</div>`;
+        html += `<div class="r2-text">${filtered}</div>`;
       }
     } else {
       html += `<div class="r2-no-data">本星落此宫无具体断语（书中未单独列出）。</div>`;
