@@ -1651,8 +1651,8 @@ function renderChart(data) {
     <div class="ci-row" style="font-size:0.78em;color:#5a3800">
       化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
       化权：<span class="star-hua-quan">${sihua['权']}</span><br>
-      化科：<span class="star-hua-ke">${sihua['科']}</span>${yearStem==='庚'?'<span style="color:#888;font-size:0.75em">，一说天府（《创作原理》）</span>':''}<br>
-      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${yearStem==='己'?'<span style="color:#888;font-size:0.75em">，一说破军（《创作原理》）</span>':''}${yearStem==='辛'?'<span style="color:#888;font-size:0.75em">，一说天梁（《创作原理》）</span>':''}
+      化科：<span class="star-hua-ke">${sihua['科']}</span>${SIHUA_CONFLICTS[yearStem]?.type==='科'?`<span style="color:#888;font-size:0.75em">，一说${SIHUA_CONFLICTS[yearStem].alts[0].star}（${SIHUA_CONFLICTS[yearStem].alts[0].src}）</span>`:''}<br>
+      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${SIHUA_CONFLICTS[yearStem]?.type==='忌'?`<span style="color:#888;font-size:0.75em">，一说${SIHUA_CONFLICTS[yearStem].alts[0].star}（${SIHUA_CONFLICTS[yearStem].alts[0].src}）</span>`:''}
     </div>
   </div>`;
   grid.appendChild(center);
@@ -2023,7 +2023,9 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
 // 四化争议标注：在解盘文本中遇到争议四化时插入来源说明
 // 格式："A条件，B内容，一说C内容（来源：xxx）"
 const SIHUA_CONFLICTS = {
-  '庚': { type: '科', main: '太阴', mainSrc: '《精成》', alts: [{star:'天府', src:'《创作原理》'}] },
+  '戊': { type: '科', main: '右弼', mainSrc: '《精成》', alts: [{star:'太阳', src:'《初级讲义》'}] },
+  '庚': { type: '科', main: '太阴', mainSrc: '《精成》', alts: [{star:'天府', src:'《创作原理》《初级讲义》'}] },
+  '壬': { type: '科', main: '左辅', mainSrc: '《精成》', alts: [{star:'天府', src:'《初级讲义》'}] },
   '己': { type: '忌', main: '文曲', mainSrc: '《精成》', alts: [{star:'破军', src:'《创作原理》'}] },
   '辛': { type: '忌', main: '文昌', mainSrc: '《精成》', alts: [{star:'天梁', src:'《创作原理》'}] },
 };
