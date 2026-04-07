@@ -349,6 +349,11 @@ button#calcBtn:hover { background: #b22222; }
   font-size: 0.85em;
 }
 
+/* 吉煞总结标签 */
+.r2-tag { display: inline-block; font-size: 0.78em; padding: 1px 6px; border-radius: 3px; margin-bottom: 4px; }
+.r2-tag-ji { color: #2d6a1e; background: #e8f5e3; border: 1px solid #b5d8a8; }
+.r2-tag-sha { color: #8b1a1a; background: #fde8e8; border: 1px solid #e8b5b5; }
+
 /* 庙旺得陷标签 */
 .mw-miao { font-size: 0.62em; color: #7a0000; background: #ffd700; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
 .mw-wang { font-size: 0.62em; color: #fff; background: #e07800; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
@@ -2222,6 +2227,77 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   return result.join('');
 }
 
+// 条件句注释：在"加吉"/"加煞"等条件关键词后插入具体星名
+function annotateStarConditions(text, branchIdx, stars) {
+  if (!text || !stars) return text;
+  const ctx = collectSFSZ(branchIdx, stars);
+  const sfJi = JI_STARS.filter(s => ctx.sfszStars.has(s));
+  const sfSha = SHA_STARS.filter(s => ctx.sfszStars.has(s));
+  const sfSha4 = SHA4_STARS.filter(s => ctx.sfszStars.has(s));
+
+  // 吉煞总结标签（插入到文本最前面）
+  let summary = '';
+  if (sfJi.length > 0 && sfSha.length > 0) {
+    if (sfJi.length >= sfSha.length) {
+      summary = `<span class="r2-tag r2-tag-ji">吉多煞少，以吉论为主</span> `;
+    } else {
+      summary = `<span class="r2-tag r2-tag-sha">煞多吉少，以煞论为主</span> `;
+    }
+  } else if (sfJi.length > 0) {
+    summary = `<span class="r2-tag r2-tag-ji">三方四正见吉无煞</span> `;
+  } else if (sfSha.length > 0) {
+    summary = `<span class="r2-tag r2-tag-sha">三方四正见煞无吉</span> `;
+  }
+
+  const jiNote  = sfJi.length  ? '（见' + sfJi.join('、')  + '）' : '';
+  const shaNote = sfSha.length ? '（见' + sfSha.join('、') + '）' : '';
+  const sha4Note = sfSha4.length ? '（见' + sfSha4.join('、') + '）' : '';
+  const sha6Note = shaNote; // 六煞=SHA_STARS
+
+  // 在关键词后插入注释（仅首次出现时注释）
+  let jiDone = false, shaDone = false, sha4Done = false, sha6Done = false;
+
+  text = text.replace(/(?:加吉|逢吉|见吉|会吉|有吉)/g, (match) => {
+    if (!jiDone && jiNote) { jiDone = true; return match + jiNote; }
+    return match;
+  });
+  text = text.replace(/(?:加煞|逢煞|见煞|有煞|带煞)/g, (match) => {
+    if (!shaDone && shaNote) { shaDone = true; return match + shaNote; }
+    return match;
+  });
+  text = text.replace(/加四煞/g, (match) => {
+    if (!sha4Done && sha4Note) { sha4Done = true; return match + sha4Note; }
+    return match;
+  });
+  text = text.replace(/(?:加六煞|见六煞)/g, (match) => {
+    if (!sha6Done && sha6Note) { sha6Done = true; return match + sha6Note; }
+    return match;
+  });
+
+  // 加会六吉
+  {
+    const ji6 = JI6_STARS.filter(s => ctx.sfszStars.has(s));
+    if (ji6.length) {
+      let done = false;
+      text = text.replace(/(?:须)?加(?:会)?六吉/g, (match) => {
+        if (!done) { done = true; return match + '（见' + ji6.join('、') + '）'; }
+        return match;
+      });
+    }
+  }
+
+  // 加会煞星
+  {
+    let done = false;
+    text = text.replace(/加会煞星/g, (match) => {
+      if (!done && shaNote) { done = true; return match + shaNote; }
+      return match;
+    });
+  }
+
+  return summary + text;
+}
+
 // 四化争议标注：在解盘文本中遇到争议四化时插入来源说明
 // 格式："A条件，B内容，一说C内容（来源：xxx）"
 const SIHUA_CONFLICTS = {
@@ -2312,6 +2388,8 @@ function renderRule2Palace(branchIdx) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
       // 根据命盘实际星曜过滤不适用的条件句
       let filtered = filterRuleText(cleaned, branchIdx, stars, star);
+      // 条件句注释：在加吉/加煞后标注具体星名
+      filtered = annotateStarConditions(filtered, branchIdx, stars);
       // 四化争议标注
       if (_chartState) filtered = annotateConflicts(filtered, STEMS[_chartState.yearStemIdx]);
       // 超过600字的视为通用大段落，只展示前500字并提供展开
