@@ -2365,11 +2365,54 @@ function renderRule2Palace(branchIdx) {
   const mainStars = palaceStars.main;
 
   if (mainStars.length === 0) {
-    // 空宫 - 显示对宫参考
+    // 空宫 - 借对宫主星解读
     const oppBr = (branchIdx + 6) % 12;
     const oppStars = stars[oppBr].main;
-    let html = `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫</div>`;
-    html += `<div class="r2-text" style="color:#888">本宫无主星，以对宫（${BRANCHES[oppBr]}宫：${oppStars.join('、') || '亦空'}）参看。</div></div>`;
+    let html = `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫（借对宫${BRANCHES[oppBr]}宫）</div>`;
+    html += `<div class="r2-text" style="color:#666;font-style:italic;margin-bottom:6px">本宫无主星，借对宫（${BRANCHES[oppBr]}宫：${oppStars.join('、') || '亦空'}）参断。空宫力量较弱，解读程度打折。</div>`;
+    if (oppStars.length === 0) {
+      html += `<div class="r2-text" style="color:#999">对宫亦无主星。</div>`;
+    } else {
+      // 借对宫每颗主星的解读文本，但用本宫的地支和辅星做过滤
+      for (const star of oppStars) {
+        const text = rule2Lookup(star, palaceName, branchIdx);
+        // 对宫星的四化和庙旺按对宫地支计算
+        const oppHuaType = stars[oppBr].hua[star];
+        const oppHuaLabel = oppHuaType ? `<span class="star-hua-${{'禄':'lu','权':'quan','科':'ke','忌':'ji'}[oppHuaType]}">${oppHuaType}</span>` : '';
+        const mwArr = MIAO_WANG[star];
+        const oppMwLevel = mwArr !== undefined ? mwArr[oppBr] : -1;
+        const oppMwLabel = oppMwLevel >= 0 ? `<span class="${MW_CSS[oppMwLevel]}" style="font-size:0.8em;margin-left:4px">${MW_LABELS[oppMwLevel]}地</span>` : '';
+        html += `<div class="r2-section" style="border-left:3px solid #ddd;padding-left:8px;margin-top:8px">`;
+        html += `<div class="r2-section-title">借 <span class="r2-star-label">${star}</span>${oppHuaLabel}${oppMwLabel}（对宫${BRANCHES[oppBr]}）</div>`;
+        if (text) {
+          const cleaned = text.replace(/\s+/g, ' ').trim();
+          // 过滤时用本宫地支但参考对宫的星曜环境
+          let filtered = filterRuleText(cleaned, branchIdx, stars, star);
+          filtered = annotateStarConditions(filtered, branchIdx, stars);
+          if (_chartState) filtered = annotateConflicts(filtered, STEMS[_chartState.yearStemIdx]);
+          if (filtered.length > 600) {
+            const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
+            const excerpt = filtered.slice(0, 500);
+            html += `<div class="r2-text">
+              <span id="${uid}_short">${excerpt}…… <button class="r2-expand-btn" onclick="
+                document.getElementById('${uid}_short').style.display='none';
+                document.getElementById('${uid}_full').style.display='block'
+              ">展开完整</button></span>
+              <span id="${uid}_full" style="display:none">${filtered} <button class="r2-expand-btn" onclick="
+                document.getElementById('${uid}_full').style.display='none';
+                document.getElementById('${uid}_short').style.display='inline'
+              ">收起</button></span>
+            </div>`;
+          } else {
+            html += `<div class="r2-text">${filtered}</div>`;
+          }
+        } else {
+          html += `<div class="r2-no-data">本星落此宫无具体断语。</div>`;
+        }
+        html += `</div>`;
+      }
+    }
+    html += `</div>`;
     return html;
   }
 
