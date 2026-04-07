@@ -444,6 +444,7 @@ button#calcBtn:hover { background: #b22222; }
 <button id="rule2-btn" onclick="toggleRule2Panel()">解　读　命　盘</button>
 <div id="rule2-panel">
   <h3>命盘解读（来源：《紫微斗数精成》第八章/第九章）</h3>
+  <div id="r2-summary"></div>
   <div class="r2-palace-tabs" id="r2-tabs"></div>
   <div id="r2-content"></div>
 </div>
@@ -617,6 +618,24 @@ const SIHUA = {
   '辛': {禄:'巨门', 权:'太阳', 科:'文曲', 忌:'文昌'},
   '壬': {禄:'天梁', 权:'紫微', 科:'左辅', 忌:'武曲'},
   '癸': {禄:'破军', 权:'巨门', 科:'太阴', 忌:'贪狼'}
+};
+
+// ---- 面相参考（来源：《字令》令东来、《字听课笔记》倪海厦天纪）----
+const FACE_REF = {
+  '紫微': '面方圆，中高身材，态度威严，有帝王相',
+  '天机': '肤偏黑，个偏矮，体格壮实，机灵',
+  '太阳': '红光满面，双目圆大，圆脸，皮肤白皙，精壮；女命相貌偏阳刚',
+  '武曲': '五短身材且壮，个性火爆',
+  '天同': '偏胖，容易出帅哥美女（子午卯酉尤甚），笑脸',
+  '廉贞': '清秀，目略迷离，善表现',
+  '天府': '体型健硕丰腴，稳重',
+  '太阴': '文弱白净；女命漂亮有女人味，男命有女孩样',
+  '贪狼': '身材魁梧，毛发较多',
+  '巨门': '形偏小声高量大；巳亥宫常高大或肥胖',
+  '天相': '瘦高，为人厚道',
+  '天梁': '方长脸，鼻直眉长，眼大而圆；庙旺中高壮微胖，陷地瘦高',
+  '七杀': '目大，性急',
+  '破军': '体瘦，个性孤僻'
 };
 
 // ---- 月系诸星（来源：rules_book1.md §6）----
@@ -1496,8 +1515,8 @@ function renderChart(data) {
 
   // 初始化全局状态
   _chartState = {
-    mingGongBrIdx, daXianData, lunarYear, lunarMonth, yearBrIdx, yearStemIdx,
-    hourBrIdx, gender,
+    mingGongBrIdx, shenGongBrIdx, daXianData, lunarYear, lunarMonth, yearBrIdx, yearStemIdx,
+    hourBrIdx, gender, sihua,
     activeDaXian: null, activeLiuNian: null
   };
 
@@ -1777,6 +1796,302 @@ function renderRule2Palace(branchIdx) {
     }
     html += `</div>`;
   }
+
+  // 命宫时追加面相参考
+  if (palaceName === '命宫' && mainStars.length > 0) {
+    const faceNotes = mainStars.map(s => FACE_REF[s]).filter(Boolean);
+    if (faceNotes.length > 0) {
+      html += `<div class="r2-section" style="background:#f8f5ee">
+        <div class="r2-section-title" style="color:#6b4c00">📋 面相参考（来源：《字令》《字听课笔记》）</div>
+        <div class="r2-text">${mainStars.map(s => FACE_REF[s] ? '<b>'+s+'</b>坐命：' + FACE_REF[s] : '').filter(Boolean).join('<br>')}</div>
+      </div>`;
+    }
+  }
+
+  return html;
+}
+
+// ============================================================
+//  综合分析引擎（格局判断 + 四化落宫 + 大限走势）
+// ============================================================
+
+// 获取某宫三方四正的所有主星（本宫+对宫+三合两宫）
+function getSanFangStars(brIdx, stars) {
+  const positions = [brIdx, (brIdx+6)%12, (brIdx+4)%12, (brIdx+8)%12];
+  const allStars = [];
+  positions.forEach(p => { if(stars[p]) allStars.push(...stars[p].main); });
+  return allStars;
+}
+
+// 获取某宫三方四正的所有辅星
+function getSanFangAux(brIdx, stars) {
+  const positions = [brIdx, (brIdx+6)%12, (brIdx+4)%12, (brIdx+8)%12];
+  const allAux = [];
+  positions.forEach(p => { if(stars[p]) allAux.push(...stars[p].aux); });
+  return allAux;
+}
+
+// 检测星曜庙旺：0=陷,1=得,2=旺,3=庙; -1=无数据
+function getMW(starName, brIdx) {
+  const arr = MIAO_WANG[starName];
+  return arr ? arr[brIdx] : -1;
+}
+
+// 六吉星
+const LUCKY6 = ['左辅','右弼','天魁','天钺','文昌','文曲'];
+// 六煞星
+const EVIL6 = ['擎羊','陀罗','火星','铃星','天空','地劫'];
+
+// 格局判断引擎
+function detectPatterns() {
+  if (!_rule2State) return [];
+  const { palaceMap, stars, mingGongBrIdx } = _rule2State;
+  const shenBrIdx = _chartState?.shenGongBrIdx ?? -1;
+  const patterns = [];
+
+  const mingMain = stars[mingGongBrIdx].main;
+  const mingAux = stars[mingGongBrIdx].aux;
+  const mingHua = stars[mingGongBrIdx].hua;
+  const sfMain = getSanFangStars(mingGongBrIdx, stars); // 三方四正所有主星
+  const sfAux = getSanFangAux(mingGongBrIdx, stars);
+  const migBrIdx = (mingGongBrIdx + 6) % 12; // 迁移宫
+  const migMain = stars[migBrIdx].main;
+  const migAux = stars[migBrIdx].aux;
+  const migHua = stars[migBrIdx].hua;
+
+  // 1. 命身同宫
+  if (shenBrIdx === mingGongBrIdx) {
+    patterns.push({type:'info', name:'命身同宫', desc:'性格内外一致，先后天发展方向相同'});
+  }
+
+  // 2. 机月同梁格
+  if (['天机','太阴','天同','天梁'].every(s => sfMain.includes(s))) {
+    patterns.push({type:'geju', name:'机月同梁格', desc:'宜公职、稳定受薪工作（"定为吏也"）'});
+  }
+
+  // 3. 杀破狼格
+  if (['七杀','破军','贪狼'].every(s => sfMain.includes(s))) {
+    patterns.push({type:'geju', name:'杀破狼格', desc:'主变革开创，限年逢之主大变动'});
+  }
+
+  // 4. 紫府朝垣
+  if (['紫微','天府'].every(s => sfMain.includes(s))) {
+    patterns.push({type:'geju', name:'紫府朝垣', desc:'主大贵，福禄厚重'});
+  }
+
+  // 5. 日照雷门
+  if (mingGongBrIdx === 4 && mingMain.includes('太阳') && mingMain.includes('天梁')) { // 卯=4
+    patterns.push({type:'geju', name:'日照雷门格', desc:'前程远大，名震天下'});
+  }
+
+  // 6. 火贪格/铃贪格
+  for (let i = 0; i < 12; i++) {
+    if (stars[i].main.includes('贪狼')) {
+      if (stars[i].aux.includes('火星')) patterns.push({type:'geju', name:'火贪格', desc:'贪狼火星同度，主横发（'+BRANCHES[i]+'宫）'});
+      if (stars[i].aux.includes('铃星')) patterns.push({type:'geju', name:'铃贪格', desc:'贪狼铃星同度，主横发（'+BRANCHES[i]+'宫）'});
+    }
+  }
+
+  // 7. 日月反背
+  {
+    let sunBr = -1, moonBr = -1;
+    for (let i = 0; i < 12; i++) {
+      if (stars[i].main.includes('太阳')) sunBr = i;
+      if (stars[i].main.includes('太阴')) moonBr = i;
+    }
+    if (sunBr >= 0 && moonBr >= 0 && getMW('太阳',sunBr) <= 1 && getMW('太阴',moonBr) <= 1) {
+      patterns.push({type:'xiong', name:'日月反背', desc:'太阳太阴均落陷/得地，一世辛劳，六亲不靠'});
+    }
+  }
+
+  // 8. 化忌冲命
+  {
+    const migHuaStars = Object.entries(migHua).filter(([s,h]) => h === '忌');
+    if (migHuaStars.length > 0) {
+      const starNames = migHuaStars.map(([s]) => s).join('、');
+      let desc = starNames + '化忌在迁移宫冲命，外出不顺，人生受限';
+      // 三煞聚冲命
+      const migEvils = migAux.filter(s => EVIL6.includes(s));
+      if (migEvils.length >= 2) {
+        desc = '⚠️ ' + starNames + '化忌 + ' + migEvils.join('、') + ' 聚迁移冲命，大凶';
+      }
+      patterns.push({type:'xiong', name:'化忌冲命', desc: desc});
+    }
+  }
+
+  // 9. 半空折翅
+  if ((mingGongBrIdx === 6 || mingGongBrIdx === 10) && // 巳=6,亥=10
+      migMain.some(s => s === '廉贞' || s === '贪狼')) {
+    const migEvils2 = migAux.filter(s => EVIL6.includes(s));
+    const oppMW = migMain.map(s => getMW(s, migBrIdx)).filter(m => m >= 0);
+    if (oppMW.some(m => m <= 1)) { // 有落陷/得的
+      const sfLucky = sfAux.filter(s => LUCKY6.includes(s));
+      if (sfLucky.length === 0) {
+        patterns.push({type:'xiong', name:'半空折翅格', desc:'命在巳/亥，廉贪落陷对冲，三方无吉星，大限在中年'});
+      }
+    }
+  }
+
+  // 10. 阳梁昌禄
+  if (sfMain.includes('太阳') && sfMain.includes('天梁') && sfAux.includes('文昌') && sfAux.includes('禄存')) {
+    const sfEvils = sfAux.filter(s => EVIL6.includes(s));
+    const sfJi = [];
+    [mingGongBrIdx, (mingGongBrIdx+6)%12, (mingGongBrIdx+4)%12, (mingGongBrIdx+8)%12].forEach(p => {
+      Object.entries(stars[p].hua).forEach(([s,h]) => { if(h==='忌') sfJi.push(s); });
+    });
+    if (sfEvils.length === 0 && sfJi.length === 0) {
+      patterns.push({type:'geju', name:'阳梁昌禄格', desc:'三方四正会太阳天梁文昌禄存无煞忌，主甲第登科、竞争得胜'});
+    }
+  }
+
+  // 11. 廉贞凶格
+  for (let i = 0; i < 12; i++) {
+    const m = stars[i].main;
+    if (m.includes('廉贞') && m.includes('七杀') && getMW('廉贞',i) <= 1 && getMW('七杀',i) <= 1) {
+      patterns.push({type:'xiong', name:'廉贞七杀落陷同宫', desc:'半路埋尸格（'+palaceMap[i]+BRANCHES[i]+'宫）'});
+    }
+    if (m.includes('廉贞') && m.includes('破军') && getMW('廉贞',i) <= 1 && getMW('破军',i) <= 1) {
+      patterns.push({type:'xiong', name:'廉贞破军落陷同宫', desc:'水中做冢格（'+palaceMap[i]+BRANCHES[i]+'宫）'});
+    }
+    if (m.includes('廉贞') && m.includes('贪狼') && getMW('廉贞',i) <= 1 && getMW('贪狼',i) <= 1) {
+      patterns.push({type:'xiong', name:'廉贞贪狼落陷同宫', desc:'主横夭（'+palaceMap[i]+BRANCHES[i]+'宫）'});
+    }
+  }
+
+  return patterns;
+}
+
+// 四化落宫综合分析
+function analyzeSihua() {
+  if (!_rule2State || !_chartState) return [];
+  const { palaceMap, stars, mingGongBrIdx } = _rule2State;
+  const sihua = _chartState.sihua;
+  if (!sihua) return [];
+  const results = [];
+  const migBrIdx = (mingGongBrIdx + 6) % 12;
+
+  const SIHUA_MEANING = {
+    '命宫':   {禄:'聪明愉悦，人缘佳，一生衣食无忧',  忌:'忙碌不满足，心态偏激，但整体吉仍可有成',  权:'上进心强，有权势',  科:'知名度增，考运好'},
+    '兄弟':   {禄:'手足情深，银行存款好，体质佳',      忌:'兄弟不得力，精气神虚',                      权:'兄弟能干',          科:'兄弟聪明'},
+    '夫妻':   {禄:'异性缘超好，婚姻得福',              忌:'太在意感情，执着',                            权:'配偶能干掌权',      科:'配偶有风度'},
+    '子女':   {禄:'孩子好，合伙顺利',                  忌:'操心孩子，冲田宅破财',                        权:'子女有成就',        科:'子女聪明'},
+    '财帛':   {禄:'财路好，手头宽裕',                  忌:'对财在意但常有破耗',                          权:'掌控力增，宜财经',  科:'有技术得财'},
+    '疾厄':   {禄:'容易懒胖，家运好',                  忌:'健康受损，脾气急',                            权:'身体壮实',          科:'养生有方'},
+    '迁移':   {禄:'外出有福，社会地位高',              忌:'外出不顺，人生受限，冲命',                    权:'在外有权势',        科:'在外有名气'},
+    '奴仆':   {禄:'人际好，得友助',                    忌:'损友多，冲兄弟破财',                          权:'下属能干',          科:'人缘文雅'},
+    '官禄':   {禄:'事业顺利，与钱财紧密',              忌:'事业不稳，常想跳槽',                          权:'掌权有势',          科:'学业有成'},
+    '田宅':   {禄:'家庭和睦，不动产多',                忌:'家运不稳',                                    权:'家业兴旺',          科:'居住环境好'},
+    '福德':   {禄:'乐天知足，果报好',                  忌:'精神压力大，享受不了安逸',                    权:'意志坚定',          科:'兴趣高雅'},
+    '父母':   {禄:'得父母长辈助力',                    忌:'与父母不和，健康受损',                        权:'父母能干',          科:'学习好，有涵养'}
+  };
+
+  ['禄','权','科','忌'].forEach(huaType => {
+    const starName = sihua[huaType];
+    if (!starName) return;
+    // 找此星落在哪个宫
+    for (let i = 0; i < 12; i++) {
+      const allStarsInPalace = [...stars[i].main, ...stars[i].aux];
+      if (allStarsInPalace.includes(starName)) {
+        const pName = palaceMap[i];
+        const meaning = SIHUA_MEANING[pName]?.[huaType] || '';
+        const label = huaType === '忌' ? '⚠️' : huaType === '禄' ? '✅' : '●';
+        results.push({
+          hua: huaType, star: starName, palace: pName, branch: BRANCHES[i],
+          meaning: meaning, label: label
+        });
+        break;
+      }
+    }
+  });
+
+  return results;
+}
+
+// 大限走势概要分析
+function analyzeDaXian() {
+  if (!_rule2State || !_chartState) return [];
+  const { palaceMap, stars } = _rule2State;
+  const daXianData = _chartState.daXianData;
+  if (!daXianData) return [];
+
+  return daXianData.slice(0, 8).map(dx => { // 前8个大限（80年）
+    const brIdx = dx.brIdx;
+    const pName = palaceMap[brIdx];
+    const mainS = stars[brIdx].main;
+    const auxS = stars[brIdx].aux;
+    const hua = stars[brIdx].hua;
+
+    const huaList = Object.entries(hua).map(([s,h]) => s+h).join(' ');
+    const evils = auxS.filter(s => EVIL6.includes(s));
+    const luckys = auxS.filter(s => LUCKY6.includes(s));
+    const hasLu = Object.values(hua).includes('禄') || auxS.includes('禄存');
+    const hasJi = Object.values(hua).includes('忌');
+
+    let verdict = '';
+    if (hasLu && !hasJi && evils.length <= 1) verdict = '🟢 吉';
+    else if (hasJi && evils.length >= 2) verdict = '🔴 凶';
+    else if (hasJi) verdict = '🟡 波折';
+    else if (evils.length >= 2 && luckys.length === 0) verdict = '🔴 煞多';
+    else if (mainS.length === 0 && evils.length > 0) verdict = '🟡 空宫带煞';
+    else verdict = '⚪ 平';
+
+    return {
+      age: dx.ageStart + '–' + dx.ageEnd + '岁',
+      palace: pName, branch: BRANCHES[brIdx],
+      mainStars: mainS.join(''), huaList: huaList,
+      evils: evils.join(''), luckys: luckys.join(''),
+      verdict: verdict
+    };
+  });
+}
+
+// 渲染综合分析HTML
+function renderSummary() {
+  let html = '';
+
+  // 1. 格局判断
+  const patterns = detectPatterns();
+  if (patterns.length > 0) {
+    html += `<div class="r2-section" style="background:#fff8f0;border-color:#d4a040">
+      <div class="r2-section-title" style="color:#8b1a1a;font-size:1em">⭐ 格局判断</div><div class="r2-text">`;
+    patterns.forEach(p => {
+      const color = p.type==='xiong' ? '#cc0000' : p.type==='geju' ? '#2d5016' : '#555';
+      html += `<div style="margin:4px 0;color:${color}"><b>${p.name}</b>：${p.desc}</div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // 2. 四化落宫
+  const sihuaResults = analyzeSihua();
+  if (sihuaResults.length > 0) {
+    html += `<div class="r2-section" style="background:#f5faef;border-color:#8cb860">
+      <div class="r2-section-title" style="color:#2d5016;font-size:1em">🔄 四化落宫分析</div><div class="r2-text">`;
+    sihuaResults.forEach(r => {
+      html += `<div style="margin:3px 0">${r.label} 化${r.hua}：<b>${r.star}</b> 落 <b>${r.palace}</b>（${r.branch}宫）— ${r.meaning}</div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // 3. 大限走势
+  const dxResults = analyzeDaXian();
+  if (dxResults.length > 0) {
+    html += `<div class="r2-section" style="background:#f5f5ff;border-color:#8888cc">
+      <div class="r2-section-title" style="color:#333;font-size:1em">📅 大限走势概要</div>
+      <div class="r2-text" style="font-size:0.85em">
+      <table style="width:100%;border-collapse:collapse;font-size:0.95em">
+      <tr style="background:#eee"><th style="padding:3px 6px;text-align:left">年龄</th><th>宫位</th><th>主星</th><th>四化</th><th>煞星</th><th>判断</th></tr>`;
+    dxResults.forEach(r => {
+      html += `<tr style="border-bottom:1px solid #e0e0e0">
+        <td style="padding:3px 6px">${r.age}</td>
+        <td>${r.palace}(${r.branch})</td>
+        <td>${r.mainStars || '空宫'}</td>
+        <td>${r.huaList || '—'}</td>
+        <td style="color:#c00">${r.evils || '—'}</td>
+        <td>${r.verdict}</td></tr>`;
+    });
+    html += `</table></div></div>`;
+  }
+
   return html;
 }
 
@@ -1785,6 +2100,8 @@ function toggleRule2Panel() {
   const panel = document.getElementById('rule2-panel');
   if (panel.style.display === 'none' || !panel.style.display) {
     panel.style.display = 'block';
+    // 渲染综合分析（格局+四化+大限）
+    document.getElementById('r2-summary').innerHTML = renderSummary();
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
