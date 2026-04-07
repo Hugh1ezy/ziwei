@@ -1829,6 +1829,19 @@ function checkClauseCondition(clause, ctx) {
     if (stemFound && !stemMatch) return false;
   }
 
+  // ---- 性别条件："男命/男喜" vs "女命/女喜" ----
+  if (ctx.gender) {
+    const isMale = ctx.gender === 'male';
+    const t = clause.trim();
+    // "女喜..." / "女命..." 开头 → 男命跳过
+    if (isMale && /^女[喜命]/.test(t)) return false;
+    // "男喜..." / "男命..." 开头 → 女命跳过
+    if (!isMale && /^男[喜命]/.test(t)) return false;
+    // "女命亦主..." 在句中出现且为独立条件
+    if (isMale && /^女命/.test(t)) return false;
+    if (!isMale && /^男命/.test(t)) return false;
+  }
+
   // ---- 检测具体星名 + "同"/"同宫"/"同度" = 本宫有该星 ----
   const reStarTong = /(再与|与)?([一-鿿]{2,3})(同宫|同度|同)/g;
   while ((m = reStarTong.exec(clause)) !== null) {
@@ -1845,6 +1858,37 @@ function checkClauseCondition(clause, ctx) {
     const huaType = m[2];
     if (ALL_STAR_NAMES.includes(starName) || MAIN_14.includes(starName)) {
       if (allHua[starName] !== huaType) return false;
+    }
+  }
+  // ---- "会XX化吉则吉" / "XX化吉" = 指定星化禄/权/科 ----
+  {
+    const reHuaJi2 = /(?:会|逢)?([\u4e00-\u9fff]{2,6})化吉/;
+    const mhj = clause.match(reHuaJi2);
+    if (mhj) {
+      const ref = mhj[1]; // e.g. "武廉破" or star names
+      // Extract 2-char star name fragments
+      const starNames = [];
+      for (let ci = 0; ci < ref.length; ci++) {
+        for (const s14 of MAIN_14) {
+          if (ref.substring(ci).startsWith(s14.charAt(0))) {
+            // Match single-char abbreviation to full star name
+            const abbrs = {'紫':'紫微','机':'天机','阳':'太阳','武':'武曲','同':'天同',
+              '廉':'廉贞','府':'天府','阴':'太阴','贪':'贪狼','巨':'巨门',
+              '相':'天相','梁':'天梁','杀':'七杀','破':'破军'};
+            if (abbrs[ref[ci]]) starNames.push(abbrs[ref[ci]]);
+          }
+        }
+      }
+      // Also try matching full 2-char names
+      for (const s14 of MAIN_14) {
+        if (ref.includes(s14)) starNames.push(s14);
+      }
+      const unique = [...new Set(starNames)];
+      if (unique.length > 0) {
+        // Check if any of these stars 化吉(禄/权/科)
+        const anyHuaJi = unique.some(s => ['禄','权','科'].includes(allHua[s]));
+        if (!anyHuaJi) return false;
+      }
     }
   }
   // ---- "逢化忌" / "更见化忌" / "再见化忌" / "又见化忌" ----
@@ -2078,6 +2122,7 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   if (!text || !stars) return text;
   const ctx = collectSFSZ(branchIdx, stars);
   if (_chartState) ctx.yearStem = STEMS[_chartState.yearStemIdx];
+  if (_chartState) ctx.gender = _chartState.gender; // 'male' or 'female'
   if (currentStar) ctx.currentStar = currentStar;
   ctx.branchIdx = branchIdx;
   ctx._stars = stars;
