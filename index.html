@@ -1796,10 +1796,10 @@ function checkClauseCondition(clause, ctx) {
     const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 3庙2旺1得0陷
     if (mwLevel >= 0) {
       const t = clause.trim();
-      if (/^(?:失陷|陷地)[，,则在或]/.test(t) && mwLevel > 0) return false;
-      if (/^庙旺[，,则有可主在或]/.test(t) && mwLevel < 2) return false;
-      if (/^得地[，,则在或]/.test(t) && mwLevel !== 1) return false;
-      if (/^旺地[，,则在或]/.test(t) && mwLevel < 2) return false;
+      if (/^(?:失陷|陷地)[，,则在或时]/.test(t) && mwLevel > 0) return false;
+      if (/^庙旺[，,则有可主在或时]/.test(t) && mwLevel < 2) return false;
+      if (/^得地[，,则在或时]/.test(t) && mwLevel !== 1) return false;
+      if (/^旺地[，,则在或时]/.test(t) && mwLevel < 2) return false;
       if (/^闲弱/.test(t) && mwLevel > 1) return false;
       if (/^入庙[，,则在或]/.test(t) && mwLevel !== 3) return false;
     }
@@ -1981,7 +1981,7 @@ function checkClauseCondition(clause, ctx) {
   for (const [abbr, fullNames] of Object.entries(STAR_ABBR)) {
     const reAbbr = new RegExp('(?:(?:加会?|逢|见|遇|与|会|并)[^。]*?' + abbr + '|' + abbr + '(?:同宫?|同度|守照?|会照?|夹|并))');
     if (reAbbr.test(clause)) {
-      if (!fullNames.some(s => sfszStars.has(s))) return false;
+      if (!fullNames.every(s => sfszStars.has(s))) return false;
     }
   }
 
@@ -2145,8 +2145,20 @@ function detectStarComboHeader(sentence) {
 // 检测句子是否为地支段落头（如"丑未宫庙旺，"、"子午宫，"、"卯酉巳亥宫，"）
 function detectBranchHeader(sentence) {
   const t = sentence.trim();
+  // 标准格式："丑未宫庙旺，" / "卯酉巳亥宫，"
   const m = t.match(/^([子丑寅卯辰巳午未申酉戌亥]{1,6})(?:宫)?[，,庙旺入得平陷]/);
-  if (m) return m[1]; // 返回地支字符串
+  if (m) return m[1];
+  // 分支+星组合格式："子午同阴，" / "丑未同巨，" / "寅申同梁，"
+  const m2 = t.match(/^([子丑寅卯辰巳午未申酉戌亥]{2,4})(?:同|武|机|紫|廉|阳)/);
+  if (m2) return m2[1];
+  return null;
+}
+
+// 检测庙旺/失陷段落头（用于段落分组）
+function detectMiaoWangHeader(sentence) {
+  const t = sentence.trim();
+  if (/^庙旺[，,则有可主在或时]/.test(t)) return 'miao'; // >=2
+  if (/^(?:失陷|陷地)[，,则在或时]/.test(t)) return 'xian'; // ==0
   return null;
 }
 
@@ -2166,6 +2178,8 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   text = text.replace(/\s+\d{3}\s+/g, ' ');
   // 去除"☆X、"序号标识（如"☆３、太阳星"→"太阳星"）
   text = text.replace(/☆[０-９\d]{1,2}、/g, '');
+  // 清理OCR产生的多余空格（连续2+空格→单空格，句号后多余空格→单空格）
+  text = text.replace(/ {2,}/g, ' ');
   // 清理OCR在条件关键词中插入的空格（如"加 煞忌"→"加煞忌"、"加 吉"→"加吉"）
   text = text.replace(/加\s+(煞|吉|会|六)/g, '加$1');
   text = text.replace(/见\s+(煞|吉)/g, '见$1');
@@ -2201,6 +2215,14 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
       continue;
     }
 
+    // 检测庙旺/失陷段落头
+    const mwHeader = detectMiaoWangHeader(sentence);
+    if (mwHeader) {
+      if (currentPara.sentences.length > 0) paragraphs.push(currentPara);
+      currentPara = { context: { type: 'miaowang', level: mwHeader }, sentences: [sentence] };
+      continue;
+    }
+
     // 非段落头：归入当前段落
     currentPara.sentences.push(sentence);
   }
@@ -2220,6 +2242,15 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
       if (para.context.type === 'branch') {
         // 地支段落：检查当前地支是否在引用中
         if (!para.context.branches.includes(currentBranch)) continue; // 跳过整个段落
+      }
+      if (para.context.type === 'miaowang' && currentStar) {
+        // 庙旺/失陷段落：检查当前主星的庙旺等级
+        const mwArr = MIAO_WANG[currentStar];
+        const mwLevel = mwArr ? mwArr[branchIdx] : -1;
+        if (mwLevel >= 0) {
+          if (para.context.level === 'xian' && mwLevel > 0) continue; // 失陷段落，星非陷→跳过
+          if (para.context.level === 'miao' && mwLevel < 2) continue; // 庙旺段落，星非庙旺→跳过
+        }
       }
     }
 
