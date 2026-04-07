@@ -2033,6 +2033,29 @@ function checkClauseCondition(clause, ctx) {
     if (!sfszStars.has('地空') && !sfszStars.has('地劫')) return false;
   }
 
+  // ---- "逢刑哭虚耗加化忌" 等多星列举条件 ----
+  // 匹配 "逢" 后紧跟多个星名简称的模式
+  {
+    const reMultiStar = /逢(刑|哭|虚|耗|姚|曲|昌|喜|鸾|破碎|阴煞|劫煞)+(?:加化忌)?/;
+    const mm = clause.match(reMultiStar);
+    if (mm) {
+      const STAR_SHORT_MAP = {
+        '刑':'天刑','哭':'天哭','虚':'天虚','耗':'大耗',
+        '姚':'天姚','曲':'文曲','昌':'文昌','喜':'天喜','鸾':'红鸾',
+        '破碎':'破碎','阴煞':'阴煞','劫煞':'劫煞'
+      };
+      const fullRef = mm[0];
+      let allPresent = true;
+      for (const [abbr, full] of Object.entries(STAR_SHORT_MAP)) {
+        if (fullRef.includes(abbr)) {
+          if (!sfszStars.has(full)) { allPresent = false; break; }
+        }
+      }
+      if (fullRef.includes('加化忌') && !Object.values(allHua).includes('忌')) allPresent = false;
+      if (!allPresent) return false;
+    }
+  }
+
   return true; // 无条件或条件成立
 }
 
@@ -2101,6 +2124,11 @@ function checkBranchCondition(clause, currentBranch) {
   const m4 = clause.match(reAnMing);
   if (m4 && m4[1] !== currentBranch) return false;
 
+  // 模式5：句中"XX宫最佳/更验/为美/较好" — 仅当指定宫位与当前一致时才相关
+  const reMidBranch = /([子丑寅卯辰巳午未申酉戌亥]{2,4})宫(?:最佳|更验|为美|较好|最好|最吉|更凶|最凶)/;
+  const m5 = clause.match(reMidBranch);
+  if (m5 && !m5[1].includes(currentBranch)) return false;
+
   return true;
 }
 
@@ -2136,6 +2164,10 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
 
   // 第零步：清理页码残留（OCR产生的独立数字如 "230" "381"）
   text = text.replace(/\s+\d{3}\s+/g, ' ');
+  // 清理OCR在条件关键词中插入的空格（如"加 煞忌"→"加煞忌"、"加 吉"→"加吉"）
+  text = text.replace(/加\s+(煞|吉|会|六)/g, '加$1');
+  text = text.replace(/见\s+(煞|吉)/g, '见$1');
+  text = text.replace(/逢\s+(煞|吉|刑|化)/g, '逢$1');
 
   // 第一步：过滤不匹配的地支段落（△/◇ 标题段落）
   let filtered = filterBranchSections(text, currentBranch);
@@ -2294,6 +2326,25 @@ function annotateStarConditions(text, branchIdx, stars) {
       return match;
     });
   }
+
+  // 百官朝拱注释
+  {
+    const pairNames = [];
+    const prs = [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']];
+    for (const [a,b] of prs) {
+      if (ctx.sfszStars.has(a) && ctx.sfszStars.has(b)) pairNames.push(a+'、'+b);
+    }
+    if (pairNames.length > 0) {
+      let done = false;
+      text = text.replace(/"百官朝拱"/g, (m) => {
+        if (!done) { done = true; return m + '（' + pairNames.join('，') + '成对）'; }
+        return m;
+      });
+    }
+  }
+
+  // 闲弱宫注释
+  text = text.replace(/闲弱宫/g, (m) => m + '（本星此宫陷地）');
 
   return summary + text;
 }
