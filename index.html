@@ -1796,12 +1796,12 @@ function checkClauseCondition(clause, ctx) {
     const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 3庙2旺1得0陷
     if (mwLevel >= 0) {
       const t = clause.trim();
-      if (/^(?:失陷|陷地)[，,则在或时]/.test(t) && mwLevel > 0) return false;
-      if (/^庙旺[，,则有可主在或时]/.test(t) && mwLevel < 2) return false;
-      if (/^得地[，,则在或时]/.test(t) && mwLevel !== 1) return false;
-      if (/^旺地[，,则在或时]/.test(t) && mwLevel < 2) return false;
+      if (/^(?:失陷|陷地)[，,则在或时加无更不亦可与且仅较]/.test(t) && mwLevel > 0) return false;
+      if (/^庙旺[，,则有可主在或时加无更不亦与且较]/.test(t) && mwLevel < 2) return false;
+      if (/^得地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 1) return false;
+      if (/^旺地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel < 2) return false;
       if (/^闲弱/.test(t) && mwLevel > 1) return false;
-      if (/^入庙[，,则在或]/.test(t) && mwLevel !== 3) return false;
+      if (/^入庙[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 3) return false;
     }
   }
   // "若XX失陷" / "若XX庙旺" / "所会的XX失陷" → 检查具体星的庙旺
@@ -2157,8 +2157,8 @@ function detectBranchHeader(sentence) {
 // 检测庙旺/失陷段落头（用于段落分组）
 function detectMiaoWangHeader(sentence) {
   const t = sentence.trim();
-  if (/^庙旺[，,则有可主在或时]/.test(t)) return 'miao'; // >=2
-  if (/^(?:失陷|陷地)[，,则在或时]/.test(t)) return 'xian'; // ==0
+  if (/^庙旺[，,则有可主在或时加无更不亦与且较]/.test(t)) return 'miao';
+  if (/^(?:失陷|陷地)[，,则在或时加无更不亦可与且仅较]/.test(t)) return 'xian';
   return null;
 }
 
@@ -2180,10 +2180,31 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   text = text.replace(/☆[０-９\d]{1,2}、/g, '');
   // 清理OCR产生的多余空格（连续2+空格→单空格，句号后多余空格→单空格）
   text = text.replace(/ {2,}/g, ' ');
-  // 清理OCR在条件关键词中插入的空格（如"加 煞忌"→"加煞忌"、"加 吉"→"加吉"）
-  text = text.replace(/加\s+(煞|吉|会|六)/g, '加$1');
-  text = text.replace(/见\s+(煞|吉)/g, '见$1');
-  text = text.replace(/逢\s+(煞|吉|刑|化)/g, '逢$1');
+  // 清理OCR在条件关键词中插入的空格
+  text = text.replace(/加\s+(煞|吉|会|六|四|空劫|桃花|昌曲|左右|魁钺)/g, '加$1');
+  text = text.replace(/见\s+(煞|吉|四煞|六煞|空劫|左右|昌曲|火铃|羊陀)/g, '见$1');
+  text = text.replace(/逢\s+(煞|吉|化|刑|巨门|空劫|财荫|刑忌)/g, '逢$1');
+  // 修复OCR切断的星名（如"紫 微"→"紫微"）
+  text = text.replace(/(紫)\s(微)/g, '$1$2');
+  text = text.replace(/(天)\s(机|同|府|相|梁|刑|姚|魁|钺|马|喜|哭|虚)/g, '$1$2');
+  text = text.replace(/(太)\s(阳|阴)/g, '$1$2');
+  text = text.replace(/(武)\s(曲)/g, '$1$2');
+  text = text.replace(/(廉)\s(贞)/g, '$1$2');
+  text = text.replace(/(贪)\s(狼)/g, '$1$2');
+  text = text.replace(/(巨)\s(门)/g, '$1$2');
+  text = text.replace(/(七)\s(杀)/g, '$1$2');
+  text = text.replace(/(破)\s(军)/g, '$1$2');
+  text = text.replace(/(擎)\s(羊)/g, '$1$2');
+  text = text.replace(/(陀)\s(罗)/g, '$1$2');
+  text = text.replace(/(火)\s(星)/g, '$1$2');
+  text = text.replace(/(铃)\s(星)/g, '$1$2');
+  text = text.replace(/(地)\s(空|劫)/g, '$1$2');
+  text = text.replace(/(文)\s(昌|曲)/g, '$1$2');
+  text = text.replace(/(左)\s(辅)/g, '$1$2');
+  text = text.replace(/(右)\s(弼)/g, '$1$2');
+  text = text.replace(/(禄)\s(存)/g, '$1$2');
+  // 修复半角逗号
+  text = text.replace(/,\s*/g, '，');
 
   // 第一步：过滤不匹配的地支段落（△/◇ 标题段落）
   let filtered = filterBranchSections(text, currentBranch);
