@@ -1796,12 +1796,12 @@ function checkClauseCondition(clause, ctx) {
     const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 3庙2旺1得0陷
     if (mwLevel >= 0) {
       const t = clause.trim();
-      if (/^(?:失陷|陷地)[，,则]/.test(t) && mwLevel > 0) return false;
-      if (/^庙旺[，,则有可主]/.test(t) && mwLevel < 2) return false;
-      if (/^得地[，,则]/.test(t) && mwLevel !== 1) return false;
-      if (/^旺地[，,则]/.test(t) && mwLevel < 2) return false;
+      if (/^(?:失陷|陷地)[，,则在或]/.test(t) && mwLevel > 0) return false;
+      if (/^庙旺[，,则有可主在或]/.test(t) && mwLevel < 2) return false;
+      if (/^得地[，,则在或]/.test(t) && mwLevel !== 1) return false;
+      if (/^旺地[，,则在或]/.test(t) && mwLevel < 2) return false;
       if (/^闲弱/.test(t) && mwLevel > 1) return false;
-      if (/^入庙[，,则]/.test(t) && mwLevel !== 3) return false;
+      if (/^入庙[，,则在或]/.test(t) && mwLevel !== 3) return false;
     }
   }
   // "若XX失陷" / "若XX庙旺" / "所会的XX失陷" → 检查具体星的庙旺
@@ -2162,8 +2162,10 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   const currentBranch = BRANCHES[branchIdx];
   const localMainNames = stars[branchIdx].main;
 
-  // 第零步：清理页码残留（OCR产生的独立数字如 "230" "381"）
+  // 第零步：清理页码残留和格式标识
   text = text.replace(/\s+\d{3}\s+/g, ' ');
+  // 去除"☆X、"序号标识（如"☆３、太阳星"→"太阳星"）
+  text = text.replace(/☆[０-９\d]{1,2}、/g, '');
   // 清理OCR在条件关键词中插入的空格（如"加 煞忌"→"加煞忌"、"加 吉"→"加吉"）
   text = text.replace(/加\s+(煞|吉|会|六)/g, '加$1');
   text = text.replace(/见\s+(煞|吉)/g, '见$1');
