@@ -110,6 +110,9 @@ function interpretChart(chartState, rule2State) {
   results._daxian = analyzeDaxian(ctx, R);
   results._female = (ctx.gender === 'female') ? checkFemale(ctx, R) : [];
   results._benduigong = analyzeBenDui(ctx, R);
+  results._feigong = analyzeFeigong(ctx, R);
+  results._liuhe = analyzeLiuhe(ctx, R);
+  results._summary = generateSummary(ctx, results, R);
 
   return results;
 }
@@ -157,9 +160,11 @@ function buildContext(chartState, rule2State) {
   // Palace stems
   const palaceStemMap = rule2State.palaceStemMap || chartState.palaceStemMap || {};
 
+  const shenBr = chartState.shenGongBrIdx !== undefined ? chartState.shenGongBrIdx : undefined;
+
   return {
     stars, palaceMap, palaceToBr, starPos, starHua, natalHua,
-    mingBr, ju, gender, yearStem, yearBrIdx, yearStemIdx,
+    mingBr, shenBr, ju, gender, yearStem, yearBrIdx, yearStemIdx,
     gongqi, sihua, palaceStemMap,
     daXianData: chartState.daXianData || []
   };
@@ -448,6 +453,159 @@ function analyzeBenDui(ctx, R) {
   return items;
 }
 
+/* ---- 飞宫四化分析 ---- */
+
+function analyzeFeigong(ctx, R) {
+  // 每宫宫干飞出四化→落宫→分析冲/叠/自化
+  const items = [];
+  for (const pName of PALACE_NAMES) {
+    const brIdx = ctx.palaceToBr[pName];
+    const stem = ctx.palaceStemMap ? ctx.palaceStemMap[brIdx] : null;
+    if (!stem) continue;
+    const sh = SIHUA_TABLE[stem];
+    if (!sh) continue;
+    const labels = ['禄','权','科','忌'];
+    for (let k = 0; k < 4; k++) {
+      const star = sh[k];
+      const hua = labels[k];
+      const targetBr = ctx.starPos[star];
+      if (targetBr === undefined) continue;
+      const targetPal = ctx.palaceMap[targetBr];
+      if (!targetPal) continue;
+      // 自化: 落回本宫
+      if (targetBr === brIdx && hua === '忌') {
+        items.push({ from: pName, to: targetPal, star, hua, type: 'self_ji',
+          text: `${pName}干(${stem})飞${star}化忌回本宫=自化忌（有中化无）`, severity: 1, src: '3.4' });
+      } else if (targetBr === brIdx && hua === '禄') {
+        items.push({ from: pName, to: targetPal, star, hua, type: 'self_lu',
+          text: `${pName}干(${stem})飞${star}化禄回本宫=自化禄（有中化无）`, severity: 0, src: '3.4' });
+      }
+      // 冲对宫
+      const duiBr = (brIdx + 6) % 12;
+      if (targetBr === duiBr && hua === '忌') {
+        const duiPal = ctx.palaceMap[duiBr] || '';
+        items.push({ from: pName, to: duiPal, star, hua, type: 'chong_ji',
+          text: `${pName}干(${stem})飞${star}化忌冲${duiPal}=真正破坏`, severity: 2, src: '3.6' });
+      }
+      // 化忌冲命宫
+      if (hua === '忌' && targetBr === ctx.mingBr && pName !== '命宫') {
+        items.push({ from: pName, to: '命宫', star, hua, type: 'ji_chong_ming',
+          text: `${pName}干(${stem})飞${star}化忌入命宫=不顺`, severity: 2, src: '3.3' });
+      }
+      // 禄忌同星检查（生年禄 vs 飞宫忌）
+      if (hua === '忌' && ctx.natalHua[star] === '禄') {
+        items.push({ from: pName, to: targetPal, star, hua, type: 'lu_ji_clash',
+          text: `${pName}干飞${star}化忌（原局化禄）=禄转忌得中有失`, severity: 2, src: '3.6' });
+      }
+    }
+  }
+  return items;
+}
+
+/* ---- 六合融合分析 ---- */
+
+const LIUHE_PAIRS = [[0,1],[2,11],[3,10],[4,9],[5,8],[6,7]]; // 子丑/寅亥/卯戌/辰酉/巳申/午未
+
+function analyzeLiuhe(ctx, R) {
+  if (!R.liuhe) return [];
+  const items = [];
+  for (const [br1, br2] of LIUHE_PAIRS) {
+    const pal1 = ctx.palaceMap[br1];
+    const pal2 = ctx.palaceMap[br2];
+    if (!pal1 || !pal2) continue;
+    const qi1 = ctx.gongqi[br1];
+    const qi2 = ctx.gongqi[br2];
+    const lv1 = qi1 && R.gongqi[qi1] ? R.gongqi[qi1].level : 5;
+    const lv2 = qi2 && R.gongqi[qi2] ? R.gongqi[qi2].level : 5;
+    const weaker = lv1 <= lv2 ? pal1 : pal2;
+    const weakQi = lv1 <= lv2 ? qi1 : qi2;
+    // Match liuhe rules
+    for (const rule of R.liuhe) {
+      if (rule.branches.includes(BRANCHES[br1]) && rule.branches.includes(BRANCHES[br2])) {
+        items.push({
+          pair: [pal1, pal2],
+          text: `${pal1}(${qi1||'?'})⇔${pal2}(${qi2||'?'})六合融合：${rule.text}。弱气方${weaker}(${weakQi})为问题根源`,
+          severity: lv1 <= 2 || lv2 <= 2 ? 1 : 0,
+          src: '2.3六合'
+        });
+      }
+    }
+  }
+  return items;
+}
+
+/* ---- 综合摘要生成 ---- */
+
+function generateSummary(ctx, results, R) {
+  const lines = [];
+  const geju = results._geju || [];
+  const daxian = results._daxian || [];
+  const feigong = results._feigong || [];
+  const liuhe = results._liuhe || [];
+
+  // 1. 命格总评
+  const mingPal = results['命宫'];
+  const mingStars = ctx.stars[ctx.mingBr];
+  const noMain = !mingStars || !mingStars.main || mingStars.main.length === 0;
+  if (noMain) {
+    const duiBr = (ctx.mingBr + 6) % 12;
+    const duiStars = ctx.stars[duiBr]?.main?.join('、') || '无';
+    lines.push(`命宫空宫（借对宫${duiStars}），根基偏虚但${ctx.gongqi[ctx.mingBr] ? '宫气'+ctx.gongqi[ctx.mingBr] : ''}有助稳定`);
+  }
+
+  // 2. 格局
+  if (geju.length > 0) {
+    const names = geju.map(g => g.name).join('、');
+    lines.push(`命中格局：${names}（共${geju.length}个）`);
+  }
+
+  // 3. 四化要点
+  const jiStar = Object.entries(ctx.natalHua).find(([s,h]) => h === '忌');
+  const luStar = Object.entries(ctx.natalHua).find(([s,h]) => h === '禄');
+  if (jiStar) {
+    const jiBr = ctx.starPos[jiStar[0]];
+    const jiPal = jiBr !== undefined ? ctx.palaceMap[jiBr] : '?';
+    lines.push(`最大凶象：${jiStar[0]}化忌落${jiPal}（${jiStar[0]==='廉贞'?'主脓血之灾':jiStar[0]==='武曲'?'主财损':jiStar[0]==='太阴'?'主投资失败':'主不顺'}）`);
+  }
+  if (luStar) {
+    const luBr = ctx.starPos[luStar[0]];
+    const luPal = luBr !== undefined ? ctx.palaceMap[luBr] : '?';
+    lines.push(`最大吉象：${luStar[0]}化禄落${luPal}`);
+  }
+
+  // 4. 飞宫四化要点（仅列severity>=2的）
+  const severeFeigong = feigong.filter(f => f.severity >= 2);
+  if (severeFeigong.length > 0) {
+    lines.push(`飞宫四化警示：${severeFeigong.map(f => f.text).join('；')}`);
+  }
+
+  // 5. 身宫
+  const shenBr = ctx.shenBr;
+  if (shenBr !== undefined) {
+    const shenPal = ctx.palaceMap[shenBr];
+    if (shenPal) {
+      const shenDesc = {'命宫':'性格鲜明','夫妻':'重感情','财帛':'重财','迁移':'喜外出','官禄':'事业心重','福德':'重享受'}[shenPal] || '';
+      lines.push(`身宫在${shenPal}：${shenDesc}`);
+    }
+  }
+
+  // 6. 大限亮点
+  const sevDx = [];
+  for (const dx of daxian) {
+    for (const item of dx.items) {
+      if (item.severity >= 3) sevDx.push(`${dx.ageStart}-${dx.ageEnd}岁${item.text}`);
+      if (item.severity <= -1) sevDx.push(`${dx.ageStart}-${dx.ageEnd}岁${item.text}`);
+    }
+  }
+  if (sevDx.length > 0) lines.push(`大限要点：${sevDx.join('；')}`);
+
+  // 7. 六合要点
+  const sevLH = liuhe.filter(l => l.severity >= 1);
+  if (sevLH.length > 0) lines.push(`六合融合：${sevLH.map(l=>l.text).join('；')}`);
+
+  return lines.join('\n');
+}
+
 /* ========== 渲染函数 ========== */
 
 function renderEngineResult(palaceResult, globalResults) {
@@ -489,6 +647,20 @@ function renderEngineResult(palaceResult, globalResults) {
         html += `<div class="eng-item ${f.severity >= 2 ? 'eng-warn' : 'eng-neutral'}">${f.text} <span class="eng-src">[${f.src}]</span></div>`;
       }
     }
+    if (globalResults._feigong && globalResults._feigong.length > 0) {
+      html += '<div class="eng-section-title">飞宫四化</div>';
+      for (const f of globalResults._feigong) {
+        const cls = f.severity >= 2 ? 'eng-warn' : f.severity < 0 ? 'eng-good' : 'eng-neutral';
+        html += `<div class="eng-item ${cls}">${f.text} <span class="eng-src">[${f.src}]</span></div>`;
+      }
+    }
+    if (globalResults._liuhe && globalResults._liuhe.length > 0) {
+      html += '<div class="eng-section-title">六合融合</div>';
+      for (const l of globalResults._liuhe) {
+        const cls = l.severity >= 1 ? 'eng-warn' : 'eng-neutral';
+        html += `<div class="eng-item ${cls}">${l.text} <span class="eng-src">[${l.src}]</span></div>`;
+      }
+    }
     if (globalResults._daxian && globalResults._daxian.length > 0) {
       html += '<div class="eng-section-title">大限走势</div>';
       for (const dx of globalResults._daxian) {
@@ -498,6 +670,10 @@ function renderEngineResult(palaceResult, globalResults) {
           html += `<div class="eng-item ${cls}">${item.text} ${srcTag}</div>`;
         }
       }
+    }
+    if (globalResults._summary) {
+      html += '<div class="eng-section-title">综合摘要</div>';
+      html += `<div class="eng-item eng-neutral" style="white-space:pre-line">${globalResults._summary}</div>`;
     }
   }
 
