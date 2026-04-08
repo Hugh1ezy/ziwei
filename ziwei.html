@@ -8,6 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/lunar-javascript/lunar.js"></script>
 <!-- Rule2 解盘数据（来源：《紫微斗数精成》大德山人著，第八章/第九章） -->
 <script src="rules/rule2_data.js"></script>
+<!-- 规则推理引擎（编码自rules_jiedu.md，纯客户端无需API） -->
+<script src="rules/rules_engine.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -1497,7 +1499,7 @@ function renderChart(data) {
   // 初始化全局状态
   _chartState = {
     mingGongBrIdx, daXianData, lunarYear, lunarMonth, yearBrIdx, yearStemIdx,
-    hourBrIdx, gender,
+    hourBrIdx, gender, ju,
     activeDaXian: null, activeLiuNian: null
   };
 
@@ -1657,7 +1659,7 @@ function renderChart(data) {
   document.getElementById('chart-container').style.display = 'block';
 
   // 保存 Rule2 所需状态
-  saveRule2State(palaceMap, stars, mingGongBrIdx);
+  saveRule2State(palaceMap, stars, mingGongBrIdx, palaceStemMap);
 
   // 显示解读按钮
   document.getElementById('rule2-btn').style.display = 'block';
@@ -1683,8 +1685,8 @@ function renderChart(data) {
 let _rule2State = null;
 
 // 排盘完成后保存必要状态供 Rule2 使用（在 renderChart 最后调用）
-function saveRule2State(palaceMap, stars, mingGongBrIdx) {
-  _rule2State = { palaceMap, stars, mingGongBrIdx };
+function saveRule2State(palaceMap, stars, mingGongBrIdx, palaceStemMap) {
+  _rule2State = { palaceMap, stars, mingGongBrIdx, palaceStemMap };
 }
 
 // 宫名补全（ziwei.html内部宫名无"宫"后缀，除命宫外）
@@ -1733,16 +1735,28 @@ function renderRule2Palace(branchIdx) {
   const palaceStars = stars[branchIdx];
   const mainStars = palaceStars.main;
 
+  let html = '';
+
+  // === 规则引擎推理结果（优先显示） ===
+  if (_engineResults && _engineResults[palaceName]) {
+    const er = _engineResults[palaceName];
+    const globalForMing = (palaceName === '命宫') ? _engineResults : null;
+    const engineHtml = (typeof renderEngineResult === 'function')
+      ? renderEngineResult(er, globalForMing) : '';
+    if (engineHtml) {
+      html += `<div class="r2-section"><div class="r2-section-title" style="background:#f0e6d0;font-weight:bold">📋 ${palaceName}（${brName}宫）— 规则引擎推演</div>${engineHtml}</div>`;
+    }
+  }
+
+  // === 原有书籍解读（降级兜底） ===
   if (mainStars.length === 0) {
-    // 空宫 - 显示对宫参考
     const oppBr = (branchIdx + 6) % 12;
     const oppStars = stars[oppBr].main;
-    let html = `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫</div>`;
+    html += `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫</div>`;
     html += `<div class="r2-text" style="color:#888">本宫无主星，以对宫（${BRANCHES[oppBr]}宫：${oppStars.join('、') || '亦空'}）参看。</div></div>`;
     return html;
   }
 
-  let html = '';
   for (const star of mainStars) {
     const text = rule2Lookup(star, palaceName, branchIdx);
     const huaType = palaceStars.hua[star];
@@ -1755,7 +1769,6 @@ function renderRule2Palace(branchIdx) {
     html += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}</div>`;
     if (text) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
-      // 超过600字的视为通用大段落，只展示前500字并提供展开
       if (cleaned.length > 600) {
         const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
         const excerpt = cleaned.slice(0, 500);
@@ -1781,10 +1794,20 @@ function renderRule2Palace(branchIdx) {
 }
 
 // 切换解读面板显示/隐藏
-function toggleRule2Panel() {
+let _engineResults = null; // 规则引擎全局结果缓存
+
+async function toggleRule2Panel() {
   const panel = document.getElementById('rule2-panel');
   if (panel.style.display === 'none' || !panel.style.display) {
     panel.style.display = 'block';
+    // 加载规则引擎数据并运行推理
+    if (typeof loadRulesData === 'function') {
+      await loadRulesData();
+      if (RULES_DATA && _rule2State && _chartState) {
+        _engineResults = interpretChart(_chartState, _rule2State);
+        injectEngineStyles();
+      }
+    }
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

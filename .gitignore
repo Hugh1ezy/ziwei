@@ -1,6 +1,7 @@
 books/
 rules/*.txt
 rules/*.json
+!rules/rules_data.json
 rules/rules_jingcheng_ch*.md
 rules/ziquan_raw.txt
 rules/ziquan_toc.txt
