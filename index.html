@@ -456,7 +456,7 @@ button#calcBtn:hover { background: #b22222; }
 <!-- Rule2 解读按钮与面板 -->
 <button id="rule2-btn" onclick="toggleRule2Panel()">解　读　命　盘</button>
 <div id="rule2-panel">
-  <h3>命盘解读（来源：《紫微斗数精成》第八章/第九章）</h3>
+  <h3>命盘解读</h3>
   <div class="r2-palace-tabs" id="r2-tabs"></div>
   <div id="r2-content"></div>
 </div>
@@ -2349,19 +2349,7 @@ function annotateStarConditions(text, branchIdx, stars) {
   const sfSha = SHA_STARS.filter(s => ctx.sfszStars.has(s));
   const sfSha4 = SHA4_STARS.filter(s => ctx.sfszStars.has(s));
 
-  // 吉煞总结标签（插入到文本最前面）
-  let summary = '';
-  if (sfJi.length > 0 && sfSha.length > 0) {
-    if (sfJi.length >= sfSha.length) {
-      summary = `<span class="r2-tag r2-tag-ji">吉多煞少，以吉论为主</span> `;
-    } else {
-      summary = `<span class="r2-tag r2-tag-sha">煞多吉少，以煞论为主</span> `;
-    }
-  } else if (sfJi.length > 0) {
-    summary = `<span class="r2-tag r2-tag-ji">三方四正见吉无煞</span> `;
-  } else if (sfSha.length > 0) {
-    summary = `<span class="r2-tag r2-tag-sha">三方四正见煞无吉</span> `;
-  }
+  // 吉煞总结标签已移至section标题栏(makeJiShaTag)，此处不再重复
 
   const jiNote  = sfJi.length  ? '（见' + sfJi.join('、')  + '）' : '';
   const shaNote = sfSha.length ? '（见' + sfSha.join('、') + '）' : '';
@@ -2428,7 +2416,7 @@ function annotateStarConditions(text, branchIdx, stars) {
   // 闲弱宫注释
   text = text.replace(/闲弱宫/g, (m) => m + '（本星此宫陷地）');
 
-  return summary + text;
+  return text;
 }
 
 // 四化争议标注：在解盘文本中遇到争议四化时插入来源说明
@@ -2528,7 +2516,7 @@ function renderRule2Palace(branchIdx) {
   }
 
   // === 渲染单颗星解读 ===
-  function renderStarSection(star, targetBrIdx, isOpp) {
+  function renderStarSection(star, targetBrIdx, isOpp, jiShaHtml) {
     let text = rule2Lookup(star, palaceName, targetBrIdx);
     const starsAtBr = stars[targetBrIdx];
     const huaType = starsAtBr?.hua?.[star];
@@ -2539,7 +2527,8 @@ function renderRule2Palace(branchIdx) {
     const oppCls = isOpp ? ' r2-opp-section' : '';
 
     let sec = `<div class="r2-section${oppCls}">`;
-    sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}</div>`;
+    const jiShaSuffix = jiShaHtml ? ` —— ${jiShaHtml}` : '';
+    sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}${jiShaSuffix}</div>`;
     if (text) {
       // 恢复：按宫位/庙陷/吉煞过滤文本 + 吉煞条件标注
       if (typeof filterRuleText === 'function') {
@@ -2574,8 +2563,8 @@ function renderRule2Palace(branchIdx) {
   }
 
   // === 原有书籍解读 ===
-  // 吉煞标签
-  html += `<div style="margin-bottom:10px">${makeJiShaTag(branchIdx)}</div>`;
+  // 吉煞文字（用于嵌入标题）
+  const jiShaText = makeJiShaTag(branchIdx);
 
   if (mainStars.length === 0) {
     // 空宫：显示对宫星曜解读
@@ -2583,13 +2572,14 @@ function renderRule2Palace(branchIdx) {
     const oppStarList = stars[oppBr]?.main || [];
     html += `<div class="r2-opp-note">本宫无主星（空宫），借对宫（${BRANCHES[oppBr]}宫：${oppStarList.join('、') || '亦空'}）参看，力量约六成。</div>`;
     for (const star of oppStarList) {
-      html += renderStarSection(star, oppBr, true);
+      html += renderStarSection(star, oppBr, true, jiShaText);
     }
     return html;
   }
 
-  for (const star of mainStars) {
-    html += renderStarSection(star, branchIdx, false);
+  for (let si = 0; si < mainStars.length; si++) {
+    // 吉煞标签只在第一颗星标题后显示一次
+    html += renderStarSection(mainStars[si], branchIdx, false, si === 0 ? jiShaText : '');
   }
   return html;
 }

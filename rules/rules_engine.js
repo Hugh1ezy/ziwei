@@ -1132,19 +1132,25 @@ function renderEngineResult(palaceResult, globalResults) {
         }
       }
     }
-    // P4: 大限详析
+    // P4: 大限详析（按年龄段折叠）
     if (globalResults._daxianDetail?.length > 0) {
       html += '<div class="eng-section-title">大限四化详析</div>';
-      for (const dx of globalResults._daxianDetail) {
-        html += `<div class="eng-item eng-neutral" style="font-weight:500">${dx.ageStart}-${dx.ageEnd}岁</div>`;
+      for (let di = 0; di < globalResults._daxianDetail.length; di++) {
+        const dx = globalResults._daxianDetail[di];
+        const dxId = `dxd_${di}`;
+        const hasSevere = dx.items.some(it => it.severity >= 2);
+        const badge = hasSevere ? ' <span style="color:#cc0000;font-size:0.8em">⚠</span>' : '';
+        html += `<div class="eng-item eng-neutral" style="font-weight:500;cursor:pointer;user-select:none" onclick="var el=document.getElementById('${dxId}');el.style.display=el.style.display==='none'?'block':'none'">${dx.ageStart}-${dx.ageEnd}岁${badge} <span style="font-size:0.75em;color:#888">▶ 点击展开</span></div>`;
+        html += `<div id="${dxId}" style="display:none">`;
         for (const item of dx.items) {
           const cls = item.severity >= 3 ? 'eng-severe' : item.severity >= 2 ? 'eng-warn' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
           html += `<div class="eng-item ${cls}">${item.text}</div>`;
         }
+        html += `</div>`;
       }
     }
-    // 综合摘要
-    if (globalResults._summary) {
+    // 综合摘要（无内容时不显示）
+    if (globalResults._summary && globalResults._summary.trim()) {
       html += '<div class="eng-section-title">综合摘要</div>';
       html += `<div class="eng-item eng-neutral" style="white-space:pre-line">${globalResults._summary}</div>`;
     }
