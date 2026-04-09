@@ -1774,7 +1774,7 @@ function renderRule2Palace(branchIdx) {
     if (text) {
       const cleaned = text.replace(/\s+/g, ' ').trim();
       if (cleaned.length > 600) {
-        const uid = `r2exp_${branchIdx}_${star.replace(/\W/g,'')}`;
+        const uid = `r2exp_${branchIdx}_${Array.from(star).map(c=>c.charCodeAt(0).toString(36)).join('')}`;
         const excerpt = cleaned.slice(0, 500);
         html += `<div class="r2-text">
           <span id="${uid}_short">${excerpt}…… <button class="r2-expand-btn" onclick="
