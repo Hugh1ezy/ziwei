@@ -960,6 +960,9 @@ function selectDaXian(n) {
   if (activeEl) activeEl.classList.add('daxian-active');
 
   drawOverlay('daxian-svg', dx.brIdx, '#0055bb', 0.65);
+  // 隐藏命盘三方四正线，避免两套线条叠加
+  const sfSvg = document.getElementById('sanfang-svg');
+  if (sfSvg) sfSvg.style.display = 'none';
   ['liunian-svg','liuyue-svg','liuri-svg','liushi-svg'].forEach(id => { const e = document.getElementById(id); if(e) e.remove(); });
 
   renderLimitPanel(dx);
