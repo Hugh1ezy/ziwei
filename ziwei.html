@@ -1500,7 +1500,8 @@ function renderChart(data) {
   _chartState = {
     mingGongBrIdx, shenGongBrIdx, daXianData, lunarYear, lunarMonth, yearBrIdx, yearStemIdx,
     hourBrIdx, gender, ju,
-    activeDaXian: null, activeLiuNian: null
+    activeDaXian: null, activeLiuNian: null,
+    miaoWang: typeof MIAO_WANG !== 'undefined' ? MIAO_WANG : null
   };
 
   // 重置面板和高亮

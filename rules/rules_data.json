@@ -36,7 +36,17 @@
     {"name":"刑忌夹印","cond":{"palace":"命宫","star":"天相","neighbors_bad":["化忌","擎羊"]},"text":"刑忌夹印大凶","severity":3,"src":"5章天相"},
     {"name":"天府戌宫","cond":{"palace":"命宫","star":"天府","branch":["戌"]},"yearBonus":["甲","己"],"text":"天府戌宫无杀甲己人腰金且富","severity":1,"src":"5章天府"},
     {"name":"天梁居午定贵","cond":{"palace":"官禄","star":"天梁","branch":["午"]},"yearBonus":["丁","己","癸"],"text":"天梁居午位官资清显朝堂","severity":1,"src":"5章天梁"},
-    {"name":"百官朝拱","cond":{"palace":"命宫","star":"紫微","aux_count_min":3},"text":"百官朝拱（18星：左右魁钺昌曲禄马等），主大贵","severity":1,"src":"5章紫微"}
+    {"name":"百官朝拱","cond":{"palace":"命宫","star":"紫微","aux_count_min":3},"text":"百官朝拱（18星：左右魁钺昌曲禄马等），主大贵","severity":1,"src":"5章紫微"},
+    {"name":"禄马交驰","cond":{"same_palace_or_duizhao":["禄存","天马"]},"text":"禄马交驰=发财远方/快速致富","severity":1,"src":"4.2格局"},
+    {"name":"双禄重逢","cond":{"same_palace":["禄存"],"same_palace_has_hua":"禄"},"text":"双禄重逢（禄存+化禄同宫）=大富","severity":1,"src":"4.2格局"},
+    {"name":"双禄朝垣","cond":{"sanfang_has_both_lu":true},"text":"双禄朝垣（命三方禄存+化禄齐聚）=富命","severity":1,"src":"4.2格局"},
+    {"name":"贪武同行格","cond":{"same_palace":["武曲","贪狼"],"branch":["丑","未"]},"text":"贪武同行格=30岁后发达（武贪不发少年人）","severity":1,"src":"5章武曲"},
+    {"name":"刑囚夹印","cond":{"same_palace":["廉贞"],"branch":["子","午"],"has_any_aux":["擎羊"]},"text":"刑囚夹印（廉贞+擎羊子午）=一生有官讼刑灾","severity":3,"src":"5章廉贞"},
+    {"name":"铃昌罗武格","cond":{"same_palace":["铃星","文昌","陀罗","武曲"]},"text":"铃昌罗武格=限运大凶（限到投河）","severity":3,"src":"南北派"},
+    {"name":"碎骨之格","cond":{"same_palace":["文昌","廉贞"]},"text":"碎骨之格（昌廉同宫）=限运当心车祸刑伤","severity":2,"src":"南北派"},
+    {"name":"日月夹命","cond":{"palace":"命宫","neighbors_stars":["太阳","太阴"]},"text":"日月夹命=有钱有地位","severity":1,"src":"南北派"},
+    {"name":"日月夹财","cond":{"palace":"财帛","neighbors_stars":["太阳","太阴"]},"text":"日月夹财=财路大开","severity":1,"src":"南北派"},
+    {"name":"紫府夹命","cond":{"palace":"命宫","neighbors_stars":["紫微","天府"]},"text":"紫府夹命=贵格","severity":1,"src":"南北派"}
   ],
 
   "sihua_rules": [
