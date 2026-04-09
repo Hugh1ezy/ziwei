@@ -164,7 +164,8 @@ function interpretChart(chartState, rule2State) {
   results._feigongChain = analyzeFeigongChain(ctx, R); // P1 new
   results._diehua = analyzeZihuaDiehua(ctx, R);     // P2 new
   results._liuhe = analyzeLiuhe(ctx, R);
-  results._summary = generateSummary(ctx, results, R);
+  // 最大凶象/最大吉象 + 身宫（原摘要内容，现移入命宫tab）
+  results._sihuaHighlight = generateSihuaHighlight(ctx);
 
   return results;
 }
@@ -945,45 +946,45 @@ function analyzeLiuhe(ctx, R) {
   return items;
 }
 
-/* ---- 综合摘要生成 (updated for P1-P4) ---- */
+/* ---- 最大凶象/最大吉象 + 身宫（移入命宫tab显示）---- */
 
-function generateSummary(ctx, results, R) {
-  const lines = [];
-  const geju = results._geju || [];
-  const daxian = results._daxian || [];
-  const feigong = results._feigong || [];
-  const feigongChain = results._feigongChain || [];
-  const diehua = results._diehua || [];
-  const jiaGe = results._jiaGe || [];
-  const liuhe = results._liuhe || [];
+function generateSihuaHighlight(ctx) {
+  const items = [];
 
-  // 1. 命格总评
-  const mingStars = ctx.stars[ctx.mingBr];
-  const noMain = !mingStars || !mingStars.main || mingStars.main.length === 0;
-  if (noMain) {
-    const duiBr = (ctx.mingBr + 6) % 12;
-    const duiStars = ctx.stars[duiBr]?.main?.join('、') || '无';
-    lines.push(`命宫空宫（借对宫${duiStars}），根基偏虚但${ctx.gongqi[ctx.mingBr] ? '宫气'+ctx.gongqi[ctx.mingBr] : ''}有助稳定`);
-  }
+  // 化禄含义表
+  const LU_MEANING = {
+    '命宫': '主人缘佳、一生有福禄',
+    '兄弟': '主兄弟得力、合伙得财',
+    '夫妻': '主配偶助力、婚后财禄显',
+    '子女': '主子女有福、合伙得财、桃花旺',
+    '财帛': '主赚钱能力强、一生忙于理财',
+    '疾厄': '主身体健康、心宽体胖',
+    '迁移': '主出外发迹、衣锦荣归',
+    '奴仆': '主人缘广、得下属朋友之力',
+    '官禄': '主工作运好、事业忙碌中得财',
+    '田宅': '主有房产库存、家运兴旺',
+    '福德': '主有福可享、秀外慧中',
+    '父母': '主父母庇荫、得长辈提携'
+  };
+  // 化忌含义表
+  const JI_MEANING = {
+    '廉贞': '主脓血之灾',
+    '武曲': '主财损、理财不顺',
+    '太阴': '主投资失败、阴性财损',
+    '太阳': '主名声受损、贵人不力',
+    '天机': '主计划多变、心神不宁',
+    '巨门': '主口舌是非、暗中小人',
+    '天同': '主福薄不安、享乐受阻',
+    '贪狼': '主欲望受挫、桃花纠纷',
+    '文昌': '主文书失误、考运不佳',
+    '文曲': '主感情困扰、是非口舌'
+  };
 
-  // 2. 格局
-  if (geju.length > 0) {
-    lines.push(`命中格局：${geju.map(g => g.name).join('、')}（共${geju.length}个）`);
-  }
-
-  // 3. 夹格要点 (P3)
-  const jiaWarn = jiaGe.filter(j => j.severity >= 2);
-  const jiaGood = jiaGe.filter(j => j.severity < 0);
-  if (jiaGood.length > 0) lines.push(`吉夹：${jiaGood.map(j => j.text).join('；')}`);
-  if (jiaWarn.length > 0) lines.push(`凶夹：${jiaWarn.map(j => j.text).join('；')}`);
-
-  // 4. 四化要点
+  // 化忌
   const jiStar = Object.entries(ctx.natalHua).find(([s,h]) => h === '忌');
-  const luStar = Object.entries(ctx.natalHua).find(([s,h]) => h === '禄');
   if (jiStar) {
     const jiBr = ctx.starPos[jiStar[0]];
     const jiPal = jiBr !== undefined ? ctx.palaceMap[jiBr] : '?';
-    // 检查庙旺化忌反吉（太阳太阴庙旺化忌反为福论）
     const jiName = jiStar[0];
     let jiReversed = false;
     if (jiName === '太阳' || jiName === '太阴') {
@@ -991,56 +992,34 @@ function generateSummary(ctx, results, R) {
       const mwLocal = jiBr !== undefined ? (ctx.stars[jiBr]?.mw?.[jiName] ?? -1) : -1;
       if (bright >= 2 || mwLocal >= 2) jiReversed = true;
     }
+    const meaning = JI_MEANING[jiName] || '主不顺';
     if (jiReversed) {
-      lines.push(`化忌特论：${jiName}化忌落${jiPal}，但${jiName}庙旺→反为福论（化忌力量被化解）`);
+      items.push({ type: 'warn', text: `化忌特论：${jiName}化忌落${jiPal}，但${jiName}庙旺→反为福论（化忌力量被化解）` });
     } else {
-      lines.push(`最大凶象：${jiName}化忌落${jiPal}（${jiName==='廉贞'?'主脓血之灾':jiName==='武曲'?'主财损':jiName==='太阴'?'主投资失败':'主不顺'}）`);
+      items.push({ type: 'severe', text: `最大凶象：${jiName}化忌落${jiPal}（${meaning}），${jiPal}所主之事须特别注意` });
     }
   }
+
+  // 化禄
+  const luStar = Object.entries(ctx.natalHua).find(([s,h]) => h === '禄');
   if (luStar) {
     const luBr = ctx.starPos[luStar[0]];
     const luPal = luBr !== undefined ? ctx.palaceMap[luBr] : '?';
-    lines.push(`最大吉象：${luStar[0]}化禄落${luPal}`);
+    const luMeaning = LU_MEANING[luPal] || '';
+    items.push({ type: 'good', text: `最大吉象：${luStar[0]}化禄落${luPal}——${luMeaning}` });
   }
 
-  // 5. 飞宫四化警示 (existing + P1 chain)
-  const severeFeigong = feigong.filter(f => f.severity >= 2);
-  const severeChain = feigongChain.filter(f => f.severity >= 2);
-  const allSevere = [...severeFeigong, ...severeChain];
-  if (allSevere.length > 0) {
-    lines.push(`飞宫四化警示：${allSevere.map(f => f.text).join('；')}`);
-  }
-
-  // 6. 自化叠化 (P2)
-  const severeDiehua = diehua.filter(d => d.severity >= 2);
-  if (severeDiehua.length > 0) {
-    lines.push(`自化叠化警示：${severeDiehua.map(d => d.text).join('；')}`);
-  }
-
-  // 7. 身宫
+  // 身宫
   const shenBr = ctx.shenBr;
   if (shenBr !== undefined) {
     const shenPal = ctx.palaceMap[shenBr];
     if (shenPal) {
-      const shenDesc = {'命宫':'性格鲜明','夫妻':'重感情','财帛':'重财','迁移':'喜外出','官禄':'事业心重','福德':'重享受'}[shenPal] || '';
-      lines.push(`身宫在${shenPal}：${shenDesc}`);
+      const shenDesc = {'命宫':'性格鲜明，自我意识强','夫妻':'重感情，一生以婚姻为重','财帛':'重财，对金钱敏感','迁移':'喜外出，适合异地发展','官禄':'事业心重，以工作为中心','福德':'重享受，注重精神生活'}[shenPal] || '';
+      items.push({ type: 'neutral', text: `身宫在${shenPal}：${shenDesc}` });
     }
   }
 
-  // 8. 大限要点
-  const sevDx = [];
-  for (const dx of daxian) {
-    for (const item of dx.items) {
-      if (item.severity >= 3 || item.severity <= -1) sevDx.push(`${dx.ageStart}-${dx.ageEnd}岁${item.text}`);
-    }
-  }
-  if (sevDx.length > 0) lines.push(`大限要点：${sevDx.join('；')}`);
-
-  // 9. 六合要点
-  const sevLH = liuhe.filter(l => l.severity >= 1);
-  if (sevLH.length > 0) lines.push(`六合融合：${sevLH.map(l=>l.text).join('；')}`);
-
-  return lines.join('\n');
+  return items;
 }
 
 /* ========== 渲染函数 (updated for P1-P4) ========== */
@@ -1114,6 +1093,14 @@ function renderEngineResult(palaceResult, globalResults) {
         html += `<div class="eng-item ${cls}">${d.text}</div>`;
       }
     }
+    // 最大凶象/最大吉象/身宫（原摘要内容，移入命宫tab）
+    if (globalResults._sihuaHighlight?.length > 0) {
+      html += '<div class="eng-section-title">四化要点</div>';
+      for (const item of globalResults._sihuaHighlight) {
+        const cls = item.type === 'severe' ? 'eng-severe' : item.type === 'good' ? 'eng-good' : item.type === 'warn' ? 'eng-warn' : 'eng-neutral';
+        html += `<div class="eng-item ${cls}">${item.text}</div>`;
+      }
+    }
     // 六合
     if (globalResults._liuhe?.length > 0) {
       html += '<div class="eng-section-title">六合融合</div>';
@@ -1122,37 +1109,42 @@ function renderEngineResult(palaceResult, globalResults) {
         html += `<div class="eng-item ${cls}">${l.text}</div>`;
       }
     }
-    // 大限走势
-    if (globalResults._daxian?.length > 0) {
+    // 大限走势 + 大限四化（合并，按年龄段折叠）
+    const hasDaxian = globalResults._daxian?.length > 0;
+    const hasDaxianDetail = globalResults._daxianDetail?.length > 0;
+    if (hasDaxian || hasDaxianDetail) {
       html += '<div class="eng-section-title">大限走势</div>';
-      for (const dx of globalResults._daxian) {
-        for (const item of dx.items) {
-          const cls = item.severity >= 3 ? 'eng-severe' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-          html += `<div class="eng-item ${cls}">${item.text}</div>`;
-        }
-      }
-    }
-    // P4: 大限详析（按年龄段折叠）
-    if (globalResults._daxianDetail?.length > 0) {
-      html += '<div class="eng-section-title">大限四化详析</div>';
-      for (let di = 0; di < globalResults._daxianDetail.length; di++) {
-        const dx = globalResults._daxianDetail[di];
-        const dxId = `dxd_${di}`;
-        const hasSevere = dx.items.some(it => it.severity >= 2);
+      const dxTrend = globalResults._daxian || [];
+      const dxDetail = globalResults._daxianDetail || [];
+      const count = Math.max(dxTrend.length, dxDetail.length);
+      for (let di = 0; di < count; di++) {
+        const trend = dxTrend[di];
+        const detail = dxDetail[di];
+        const ageStart = trend?.ageStart || detail?.ageStart || '?';
+        const ageEnd = trend?.ageEnd || detail?.ageEnd || '?';
+        // 判断是否有重要内容
+        const hasSevere = (trend?.items?.some(it => it.severity >= 3 || it.severity <= -1)) ||
+                          (detail?.items?.some(it => it.severity >= 2));
         const badge = hasSevere ? ' <span style="color:#cc0000;font-size:0.8em">⚠</span>' : '';
-        html += `<div class="eng-item eng-neutral" style="font-weight:500;cursor:pointer;user-select:none" onclick="var el=document.getElementById('${dxId}');el.style.display=el.style.display==='none'?'block':'none'">${dx.ageStart}-${dx.ageEnd}岁${badge} <span style="font-size:0.75em;color:#888">▶ 点击展开</span></div>`;
+        const dxId = `dxm_${di}`;
+        html += `<div class="eng-item eng-neutral" style="font-weight:500;cursor:pointer;user-select:none" onclick="var el=document.getElementById('${dxId}');el.style.display=el.style.display==='none'?'block':'none'">${ageStart}-${ageEnd}岁${badge} <span style="font-size:0.75em;color:#888">▶ 点击展开</span></div>`;
         html += `<div id="${dxId}" style="display:none">`;
-        for (const item of dx.items) {
-          const cls = item.severity >= 3 ? 'eng-severe' : item.severity >= 2 ? 'eng-warn' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-          html += `<div class="eng-item ${cls}">${item.text}</div>`;
+        // 走势内容
+        if (trend?.items) {
+          for (const item of trend.items) {
+            const cls = item.severity >= 3 ? 'eng-severe' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
+            html += `<div class="eng-item ${cls}">${item.text}</div>`;
+          }
+        }
+        // 四化详析内容
+        if (detail?.items) {
+          for (const item of detail.items) {
+            const cls = item.severity >= 3 ? 'eng-severe' : item.severity >= 2 ? 'eng-warn' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
+            html += `<div class="eng-item ${cls}">${item.text}</div>`;
+          }
         }
         html += `</div>`;
       }
-    }
-    // 综合摘要（无内容时不显示）
-    if (globalResults._summary && globalResults._summary.trim()) {
-      html += '<div class="eng-section-title">综合摘要</div>';
-      html += `<div class="eng-item eng-neutral" style="white-space:pre-line">${globalResults._summary}</div>`;
     }
   }
 
