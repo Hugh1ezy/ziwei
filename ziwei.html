@@ -350,6 +350,17 @@ button#calcBtn:hover { background: #b22222; }
   font-style: italic;
   font-size: 0.85em;
 }
+/* 吉煞总结标签 */
+.r2-tag { display:inline-block; font-size:0.75em; padding:1px 7px; border-radius:3px; margin-right:5px; font-weight:bold; vertical-align:middle; }
+.r2-tag-ji { background:#e6f7e6; color:#1a7a1a; border:1px solid #9ed09e; }
+.r2-tag-sha { background:#fde8e8; color:#a02020; border:1px solid #e0a0a0; }
+.r2-tag-ping { background:#f0f0f0; color:#666; border:1px solid #ccc; }
+/* 空宫借对宫样式 */
+.r2-opp-note { color:#886622; font-style:italic; font-size:0.88em; margin-bottom:8px; padding:4px 8px; background:#fdf8ee; border-left:3px solid #dabb66; border-radius:3px; }
+.r2-opp-section { border-left:3px solid #ccc; padding-left:10px; opacity:0.92; }
+/* 段落化排版 */
+.r2-text p { margin:6px 0; text-indent:2em; line-height:1.9; }
+.r2-text .r2-sub { margin:8px 0 4px; font-weight:bold; color:#5a3800; border-bottom:1px dotted #d0c0a0; padding-bottom:2px; }
 
 /* 庙旺得陷标签 */
 .mw-miao { font-size: 0.62em; color: #7a0000; background: #ffd700; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
@@ -1752,47 +1763,96 @@ function renderRule2Palace(branchIdx) {
     }
   }
 
-  // === 原有书籍解读（降级兜底） ===
-  if (mainStars.length === 0) {
-    const oppBr = (branchIdx + 6) % 12;
-    const oppStars = stars[oppBr].main;
-    html += `<div class="r2-section"><div class="r2-section-title">${palaceName}（${brName}宫）— 空宫</div>`;
-    html += `<div class="r2-text" style="color:#888">本宫无主星，以对宫（${BRANCHES[oppBr]}宫：${oppStars.join('、') || '亦空'}）参看。</div></div>`;
-    return html;
+  // === 吉煞总结标签 ===
+  function makeJiShaTag(brIdx) {
+    const JI = ['左辅','右弼','天魁','天钺','文昌','文曲','禄存','天马'];
+    const SHA = ['擎羊','陀罗','火星','铃星','天空','地劫'];
+    const sf = [brIdx, (brIdx+4)%12, (brIdx+6)%12, (brIdx+8)%12];
+    let ji=0, sha=0;
+    for (const b of sf) {
+      const s = stars[b]; if (!s) continue;
+      const all = [...(s.main||[]),...(s.aux||[])];
+      for (const st of all) { if (JI.includes(st)) ji++; if (SHA.includes(st)) sha++; }
+      if (s.hua) for (const h of Object.values(s.hua)) { if (h==='禄'||h==='权'||h==='科') ji++; if (h==='忌') sha++; }
+    }
+    if (ji>0 && sha===0) return `<span class="r2-tag r2-tag-ji">三方四正见吉无煞</span>`;
+    if (sha>0 && ji===0) return `<span class="r2-tag r2-tag-sha">三方四正见煞无吉</span>`;
+    if (ji>sha) return `<span class="r2-tag r2-tag-ji">吉${ji}煞${sha}，以吉论</span>`;
+    if (sha>ji) return `<span class="r2-tag r2-tag-sha">煞${sha}吉${ji}，以煞论</span>`;
+    if (ji>0) return `<span class="r2-tag r2-tag-ping">吉煞相当</span>`;
+    return '';
   }
 
-  for (const star of mainStars) {
-    const text = rule2Lookup(star, palaceName, branchIdx);
-    const huaType = palaceStars.hua[star];
+  // === 排版美化：将文字按句号/分号分段 ===
+  function formatText(raw) {
+    const cleaned = raw.replace(/\s+/g, ' ').trim();
+    // 按宫位小节分割（子午宫/辰戌宫/寅申宫/巳亥宫/丑未宫/卯酉宫）
+    let formatted = cleaned.replace(/((?:子午|辰戌|寅申|巳亥|丑未|卯酉)宫[，,])/g, '</p><p class="r2-sub">$1</p><p>');
+    // 按"化禄/化权/化科/化忌，"分割
+    formatted = formatted.replace(/(化(?:禄|权|科|忌)[，,])/g, '</p><p class="r2-sub">$1</p><p>');
+    // 按"庙旺/失陷，"分割
+    formatted = formatted.replace(/((?:庙旺|失陷)[，,])/g, '</p><p class="r2-sub">$1</p><p>');
+    formatted = `<p>${formatted}</p>`;
+    formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+    return formatted;
+  }
+
+  // === 渲染单颗星解读 ===
+  function renderStarSection(star, targetBrIdx, isOpp) {
+    const text = rule2Lookup(star, palaceName, targetBrIdx);
+    const starsAtBr = stars[targetBrIdx];
+    const huaType = starsAtBr?.hua?.[star];
     const huaLabel = huaType ? `<span class="star-hua-${{'禄':'lu','权':'quan','科':'ke','忌':'ji'}[huaType]}">${huaType}</span>` : '';
     const mwArr = MIAO_WANG[star];
-    const mwBrIdx = branchIdx;
-    const mwLevel = mwArr !== undefined ? mwArr[mwBrIdx] : -1;
+    const mwLevel = mwArr !== undefined ? mwArr[targetBrIdx] : -1;
     const mwLabel = mwLevel >= 0 ? `<span class="${MW_CSS[mwLevel]}" style="font-size:0.8em;margin-left:4px">${MW_LABELS[mwLevel]}地</span>` : '';
-    html += `<div class="r2-section">`;
-    html += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}</div>`;
+    const oppCls = isOpp ? ' r2-opp-section' : '';
+
+    let sec = `<div class="r2-section${oppCls}">`;
+    sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}</div>`;
     if (text) {
-      const cleaned = text.replace(/\s+/g, ' ').trim();
-      if (cleaned.length > 600) {
+      const formatted = formatText(text);
+      if (formatted.length > 800) {
         const uid = `r2exp_${branchIdx}_${Array.from(star).map(c=>c.charCodeAt(0).toString(36)).join('')}`;
-        const excerpt = cleaned.slice(0, 500);
-        html += `<div class="r2-text">
-          <span id="${uid}_short">${excerpt}…… <button class="r2-expand-btn" onclick="
+        const plain = text.replace(/\s+/g,' ').trim();
+        const excerpt = plain.slice(0, 400);
+        sec += `<div class="r2-text">
+          <span id="${uid}_short"><p>${excerpt}……</p> <button class="r2-expand-btn" onclick="
             document.getElementById('${uid}_short').style.display='none';
             document.getElementById('${uid}_full').style.display='block'
           ">展开完整</button></span>
-          <span id="${uid}_full" style="display:none">${cleaned} <button class="r2-expand-btn" onclick="
+          <span id="${uid}_full" style="display:none">${formatted} <button class="r2-expand-btn" onclick="
             document.getElementById('${uid}_full').style.display='none';
             document.getElementById('${uid}_short').style.display='inline'
           ">收起</button></span>
         </div>`;
       } else {
-        html += `<div class="r2-text">${cleaned}</div>`;
+        sec += `<div class="r2-text">${formatted}</div>`;
       }
     } else {
-      html += `<div class="r2-no-data">本星落此宫无具体断语（书中未单独列出）。</div>`;
+      sec += `<div class="r2-no-data">本星落此宫无具体断语。</div>`;
     }
-    html += `</div>`;
+    sec += `</div>`;
+    return sec;
+  }
+
+  // === 原有书籍解读 ===
+  // 吉煞标签
+  html += `<div style="margin-bottom:10px">${makeJiShaTag(branchIdx)}</div>`;
+
+  if (mainStars.length === 0) {
+    // 空宫：显示对宫星曜解读
+    const oppBr = (branchIdx + 6) % 12;
+    const oppStarList = stars[oppBr]?.main || [];
+    html += `<div class="r2-opp-note">本宫无主星（空宫），借对宫（${BRANCHES[oppBr]}宫：${oppStarList.join('、') || '亦空'}）参看，力量约六成。</div>`;
+    for (const star of oppStarList) {
+      html += renderStarSection(star, oppBr, true);
+    }
+    return html;
+  }
+
+  for (const star of mainStars) {
+    html += renderStarSection(star, branchIdx, false);
   }
   return html;
 }
