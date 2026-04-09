@@ -20,8 +20,9 @@ async function loadRulesData() {
 }
 
 /* ========== 常量 ========== */
-const BRANCHES = '子丑寅卯辰巳午未申酉戌亥'.split('');
-const STEMS = '甲乙丙丁戊己庚辛壬癸'.split('');
+// BRANCHES / STEMS 由 ziwei.html 主脚本声明，此处仅在独立运行(Node.js测试)时兜底
+var _RE_BRANCHES = (typeof BRANCHES !== 'undefined') ? BRANCHES : '子丑寅卯辰巳午未申酉戌亥'.split('');
+var _RE_STEMS    = (typeof STEMS !== 'undefined')    ? STEMS    : '甲乙丙丁戊己庚辛壬癸'.split('');
 const PALACE_NAMES = ['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','奴仆','官禄','田宅','福德','父母'];
 const LIUQIN = ['命宫','兄弟','夫妻','子女','奴仆','父母'];
 const LIUWAI = ['迁移','奴仆','官禄','田宅','福德','父母'];
@@ -42,8 +43,8 @@ const SANHE = [[2,6,10],[5,9,1],[8,0,4],[11,3,7]];
 
 /* ========== 工具函数 ========== */
 
-function getBranch(brIdx) { return BRANCHES[brIdx]; }
-function getStem(stemIdx) { return STEMS[stemIdx]; }
+function getBranch(brIdx) { return _RE_BRANCHES[brIdx]; }
+function getStem(stemIdx) { return _RE_STEMS[stemIdx]; }
 
 function getSanfangBrs(brIdx) {
   const duiGong = (brIdx + 6) % 12;
@@ -925,7 +926,7 @@ function analyzeLiuhe(ctx, R) {
     const weaker = lv1 <= lv2 ? pal1 : pal2;
     const weakQi = lv1 <= lv2 ? qi1 : qi2;
     for (const rule of R.liuhe) {
-      if (rule.branches.includes(BRANCHES[br1]) && rule.branches.includes(BRANCHES[br2])) {
+      if (rule.branches.includes(_RE_BRANCHES[br1]) && rule.branches.includes(_RE_BRANCHES[br2])) {
         items.push({
           pair: [pal1, pal2],
           text: `${pal1}(${qi1||'?'})⇔${pal2}(${qi2||'?'})六合融合：${rule.text}。弱气方${weaker}(${weakQi})为问题根源`,
