@@ -46,7 +46,13 @@
     {"name":"碎骨之格","cond":{"same_palace":["文昌","廉贞"]},"text":"碎骨之格（昌廉同宫）=限运当心车祸刑伤","severity":2,"src":"南北派"},
     {"name":"日月夹命","cond":{"palace":"命宫","neighbors_stars":["太阳","太阴"]},"text":"日月夹命=有钱有地位","severity":1,"src":"南北派"},
     {"name":"日月夹财","cond":{"palace":"财帛","neighbors_stars":["太阳","太阴"]},"text":"日月夹财=财路大开","severity":1,"src":"南北派"},
-    {"name":"紫府夹命","cond":{"palace":"命宫","neighbors_stars":["紫微","天府"]},"text":"紫府夹命=贵格","severity":1,"src":"南北派"}
+    {"name":"紫府夹命","cond":{"palace":"命宫","neighbors_stars":["紫微","天府"]},"text":"紫府夹命=贵格","severity":1,"src":"南北派"},
+    {"name":"明珠出海格","cond":{"same_palace":["巨门","太阳"],"branch":["未"]},"text":"明珠出海格=巨门太阳未宫同度，会左右昌曲主大贵","severity":1,"src":"命运分析Ch11"},
+    {"name":"月生沧海格","cond":{"palace":"命宫","star":"太阴","branch":["子"]},"text":"月生沧海格=太阴子宫入庙守命，逢左右昌曲主大富贵","severity":1,"src":"命运分析Ch11"},
+    {"name":"坐贵向贵格","cond":{"palace":"命宫","star":"天魁","duizhao":"天钺"},"text":"坐贵向贵格=命坐天魁对宫天钺（或反之），贵人运极强","severity":1,"src":"命运分析Ch11"},
+    {"name":"文桂文华格","cond":{"same_palace":["文昌","文曲"]},"text":"文桂文华格=昌曲同宫，主文学才华出众科甲功名","severity":1,"src":"命运分析Ch11"},
+    {"name":"左右同宫格","cond":{"same_palace":["左辅","右弼"]},"text":"左右同宫格=辅弼同宫助力极强，须会紫府方佳","severity":1,"src":"命运分析Ch11"},
+    {"name":"贪狼水桃花","cond":{"palace":"命宫","star":"贪狼","branch":["子"]},"text":"贪狼居子名曰水桃花，木得水生桃花力最强","severity":0,"src":"命运分析Ch10"}
   ],
 
   "sihua_rules": [
