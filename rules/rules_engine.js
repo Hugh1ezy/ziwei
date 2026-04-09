@@ -1051,8 +1051,7 @@ function renderEngineResult(palaceResult, globalResults) {
     else if (sev >= 2) cls = 'eng-warn';
     else if (sev >= 1) cls = 'eng-normal';
     else if (sev < 0) cls = 'eng-good';
-    const srcTag = item.src ? `<span class="eng-src">[${item.src}]</span>` : '';
-    html += `<div class="eng-item ${cls}">${item.text} ${srcTag}</div>`;
+    html += `<div class="eng-item ${cls}">${item.text}</div>`;
   }
 
   if (palaceResult.palace === '命宫' && globalResults) {
@@ -1060,7 +1059,7 @@ function renderEngineResult(palaceResult, globalResults) {
     if (globalResults._geju?.length > 0) {
       html += '<div class="eng-section-title">★ 格局</div>';
       for (const g of globalResults._geju) {
-        html += `<div class="eng-item eng-geju">【${g.name}】${g.text} <span class="eng-src">[${g.src}]</span></div>`;
+        html += `<div class="eng-item eng-geju">${g.name}：${g.text}</div>`;
       }
     }
     // P3: 夹格
@@ -1068,7 +1067,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">夹格分析</div>';
       for (const j of globalResults._jiaGe) {
         const cls = j.severity >= 2 ? 'eng-warn' : j.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${j.text} <span class="eng-src">[${j.src}]</span></div>`;
+        html += `<div class="eng-item ${cls}">${j.text}</div>`;
       }
     }
     // 本对宫
@@ -1082,7 +1081,7 @@ function renderEngineResult(palaceResult, globalResults) {
     if (globalResults._female?.length > 0) {
       html += '<div class="eng-section-title">女命专论</div>';
       for (const f of globalResults._female) {
-        html += `<div class="eng-item ${f.severity >= 2 ? 'eng-warn' : 'eng-neutral'}">${f.text} <span class="eng-src">[${f.src}]</span></div>`;
+        html += `<div class="eng-item ${f.severity >= 2 ? 'eng-warn' : 'eng-neutral'}">${f.text}</div>`;
       }
     }
     // 飞宫单层
@@ -1090,7 +1089,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">飞宫四化</div>';
       for (const f of globalResults._feigong) {
         const cls = f.severity >= 2 ? 'eng-warn' : f.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${f.text} <span class="eng-src">[${f.src}]</span></div>`;
+        html += `<div class="eng-item ${cls}">${f.text}</div>`;
       }
     }
     // P1: 链式飞宫
@@ -1098,7 +1097,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">链式飞宫追踪</div>';
       for (const f of globalResults._feigongChain) {
         const cls = f.severity >= 3 ? 'eng-severe' : f.severity >= 2 ? 'eng-warn' : f.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${f.text} <span class="eng-src">[${f.src}]</span></div>`;
+        html += `<div class="eng-item ${cls}">${f.text}</div>`;
       }
     }
     // P2: 自化叠化
@@ -1106,7 +1105,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">自化叠化</div>';
       for (const d of globalResults._diehua) {
         const cls = d.severity >= 3 ? 'eng-severe' : d.severity >= 2 ? 'eng-warn' : d.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${d.text} <span class="eng-src">[${d.src}]</span></div>`;
+        html += `<div class="eng-item ${cls}">${d.text}</div>`;
       }
     }
     // 六合
@@ -1114,7 +1113,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">六合融合</div>';
       for (const l of globalResults._liuhe) {
         const cls = l.severity >= 1 ? 'eng-warn' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${l.text} <span class="eng-src">[${l.src}]</span></div>`;
+        html += `<div class="eng-item ${cls}">${l.text}</div>`;
       }
     }
     // 大限走势
@@ -1123,8 +1122,7 @@ function renderEngineResult(palaceResult, globalResults) {
       for (const dx of globalResults._daxian) {
         for (const item of dx.items) {
           const cls = item.severity >= 3 ? 'eng-severe' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-          const srcTag = item.src ? `<span class="eng-src">[${item.src}]</span>` : '';
-          html += `<div class="eng-item ${cls}">${item.text} ${srcTag}</div>`;
+          html += `<div class="eng-item ${cls}">${item.text}</div>`;
         }
       }
     }
@@ -1135,8 +1133,7 @@ function renderEngineResult(palaceResult, globalResults) {
         html += `<div class="eng-item eng-neutral" style="font-weight:500">${dx.ageStart}-${dx.ageEnd}岁</div>`;
         for (const item of dx.items) {
           const cls = item.severity >= 3 ? 'eng-severe' : item.severity >= 2 ? 'eng-warn' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-          const srcTag = item.src ? `<span class="eng-src">[${item.src}]</span>` : '';
-          html += `<div class="eng-item ${cls}">${item.text} ${srcTag}</div>`;
+          html += `<div class="eng-item ${cls}">${item.text}</div>`;
         }
       }
     }
