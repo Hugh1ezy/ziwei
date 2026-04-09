@@ -245,6 +245,35 @@ function interpretPalace(ctx, palaceName, R) {
     items.push({ type: 'star_base', text: desc, severity: 0, src: `5章${st}` });
   }
 
+  // 2b. Double-star lookup (双星组合速查)
+  if (R.double_star && (sData.main || []).length >= 2) {
+    const STAR_ABBR = {'紫微':'紫','天机':'机','太阳':'阳','武曲':'武','天同':'同','廉贞':'廉',
+      '天府':'府','太阴':'阴','贪狼':'贪','巨门':'巨','天相':'相','天梁':'梁','七杀':'杀','破军':'破'};
+    const mainList = sData.main.filter(s => STAR_ABBR[s]);
+    if (mainList.length === 2) {
+      const abbrs = mainList.map(s => STAR_ABBR[s]);
+      // Try both orderings
+      const keys = [abbrs.join(''), abbrs.reverse().join('')];
+      for (const key of keys) {
+        const ds = R.double_star[key];
+        if (ds) {
+          items.push({ type: 'double_star', text: `【${key}】${ds.trait}（${ds.tag}）`, severity: 0, src: '§7双星速查' });
+          break;
+        }
+      }
+    }
+  }
+
+  // 2c. 天魁天钺40后减力提示
+  if (R.star_base) {
+    const hasKui = allStars.includes('天魁');
+    const hasYue = allStars.includes('天钺');
+    if ((hasKui || hasYue) && (branch === '丑' || branch === '未')) {
+      const starName = hasKui ? '天魁' : '天钺';
+      items.push({ type: 'aux_note', text: `${starName}在${branch}（墓库宫）：四十岁后贵人运减力，不见得有贵人反招小人`, severity: 1, src: '§5辅星/南北派' });
+    }
+  }
+
   // 3. Sihua analysis (P0: brightness checks active)
   for (const st of allStars) {
     const hua = ctx.natalHua[st];
@@ -947,7 +976,19 @@ function generateSummary(ctx, results, R) {
   if (jiStar) {
     const jiBr = ctx.starPos[jiStar[0]];
     const jiPal = jiBr !== undefined ? ctx.palaceMap[jiBr] : '?';
-    lines.push(`最大凶象：${jiStar[0]}化忌落${jiPal}（${jiStar[0]==='廉贞'?'主脓血之灾':jiStar[0]==='武曲'?'主财损':jiStar[0]==='太阴'?'主投资失败':'主不顺'}）`);
+    // 检查庙旺化忌反吉（太阳太阴庙旺化忌反为福论）
+    const jiName = jiStar[0];
+    let jiReversed = false;
+    if (jiName === '太阳' || jiName === '太阴') {
+      const bright = getStarBrightness(ctx, jiName, jiBr);
+      const mwLocal = jiBr !== undefined ? (ctx.stars[jiBr]?.mw?.[jiName] ?? -1) : -1;
+      if (bright >= 2 || mwLocal >= 2) jiReversed = true;
+    }
+    if (jiReversed) {
+      lines.push(`化忌特论：${jiName}化忌落${jiPal}，但${jiName}庙旺→反为福论（化忌力量被化解）`);
+    } else {
+      lines.push(`最大凶象：${jiName}化忌落${jiPal}（${jiName==='廉贞'?'主脓血之灾':jiName==='武曲'?'主财损':jiName==='太阴'?'主投资失败':'主不顺'}）`);
+    }
   }
   if (luStar) {
     const luBr = ctx.starPos[luStar[0]];
