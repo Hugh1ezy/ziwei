@@ -2514,15 +2514,14 @@ function renderRule2Palace(branchIdx) {
     return '';
   }
 
-  // === 排版美化：将文字按句号/分号分段 ===
+  // === 排版美化：只在句首出现宫位/四化/庙陷标记时分段 ===
   function formatText(raw) {
     const cleaned = raw.replace(/\s+/g, ' ').trim();
-    // 按宫位小节分割（子午宫/辰戌宫/寅申宫/巳亥宫/丑未宫/卯酉宫）
-    let formatted = cleaned.replace(/((?:子午|辰戌|寅申|巳亥|丑未|卯酉)宫[，,])/g, '</p><p class="r2-sub">$1</p><p>');
-    // 按"化禄/化权/化科/化忌，"分割
-    formatted = formatted.replace(/(化(?:禄|权|科|忌)[，,])/g, '</p><p class="r2-sub">$1</p><p>');
-    // 按"庙旺/失陷，"分割
-    formatted = formatted.replace(/((?:庙旺|失陷)[，,])/g, '</p><p class="r2-sub">$1</p><p>');
+    // 只在"。"或文本开头之后紧跟宫位/四化/庙陷标记时分段（避免句中拆断）
+    // 匹配：句号+可选空格+宫位名/四化名/庙陷名+逗号
+    let formatted = cleaned.replace(/([。])\s*((?:子午|辰戌|寅申|巳亥|丑未|卯酉)宫[，,])/g, '$1</p><p class="r2-sub">$2</p><p>');
+    formatted = formatted.replace(/([。])\s*(逢?化(?:禄|权|科|忌)[，,])/g, '$1</p><p class="r2-sub">$2</p><p>');
+    formatted = formatted.replace(/([。])\s*((?:庙旺|失陷)[，,])/g, '$1</p><p class="r2-sub">$2</p><p>');
     formatted = `<p>${formatted}</p>`;
     formatted = formatted.replace(/<p>\s*<\/p>/g, '');
     return formatted;
