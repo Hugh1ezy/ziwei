@@ -51,7 +51,7 @@
     {"name":"月生沧海格","cond":{"palace":"命宫","star":"太阴","branch":["子"]},"text":"月生沧海格=太阴子宫入庙守命，逢左右昌曲主大富贵","severity":1,"src":"命运分析Ch11"},
     {"name":"坐贵向贵格","cond":{"palace":"命宫","star":"天魁","duizhao":"天钺"},"text":"坐贵向贵格=命坐天魁对宫天钺（或反之），贵人运极强","severity":1,"src":"命运分析Ch11"},
     {"name":"文桂文华格","cond":{"same_palace":["文昌","文曲"]},"text":"文桂文华格=昌曲同宫，主文学才华出众科甲功名","severity":1,"src":"命运分析Ch11"},
-    {"name":"左右同宫格","cond":{"same_palace":["左辅","右弼"]},"text":"左右同宫格=辅弼同宫助力极强，须会紫府方佳","severity":1,"src":"命运分析Ch11"},
+    {"name":"左右同宫格","cond":{"same_palace":["左辅","右弼"],"in_sanfang":true},"text":"左右同宫格=辅弼同宫（命宫三方四正内）助力极强，须会紫府方佳","severity":1,"src":"命运分析Ch11"},
     {"name":"贪狼水桃花","cond":{"palace":"命宫","star":"贪狼","branch":["子"]},"text":"贪狼居子名曰水桃花，木得水生桃花力最强","severity":0,"src":"命运分析Ch10"},
     {"name":"巨机同宫格","cond":{"same_palace":["天机","巨门"]},"text":"巨机同宫公卿之位（命在丑未尤佳，乙辛己丙生人至公卿）","severity":1,"src":"1.3骨髓赋+5章巨门"}
   ],

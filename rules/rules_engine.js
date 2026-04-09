@@ -398,7 +398,13 @@ function matchGeju(ctx, R) {
     }
 
     if (c.same_palace) {
-      for (let br = 0; br < 12; br++) {
+      // 确定搜索范围：in_sanfang=true时仅搜索命宫三方四正
+      let searchBrs = Array.from({length:12}, (_,i) => i);
+      if (c.in_sanfang) {
+        const mb = ctx.mingBr;
+        searchBrs = [mb, (mb+4)%12, (mb+6)%12, (mb+8)%12];
+      }
+      for (const br of searchBrs) {
         const s = ctx.stars[br];
         if (!s) continue;
         const all = [...(s.main || []), ...(s.aux || [])];
