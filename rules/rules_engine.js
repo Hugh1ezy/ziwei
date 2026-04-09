@@ -290,6 +290,28 @@ function interpretPalace(ctx, palaceName, R) {
         if (!sha.some(s => allStars.includes(s))) continue;
       }
     }
+    // P0: brightness check for combo rules (e.g. 廉贞火星须陷地方论)
+    if (rule.brightness_max !== undefined || rule.brightness_min !== undefined) {
+      let brightnessOk = true;
+      let checked = false;
+      for (const st of ruleStars) {
+        const bright = getStarBrightness(ctx, st, brIdx);
+        if (bright < 0) {
+          // Also check per-star mw from rule2State
+          const sData = ctx.stars[brIdx];
+          const mwLocal = sData?.mw?.[st];
+          if (mwLocal === undefined) continue; // truly unknown, skip
+          if (rule.brightness_max !== undefined && mwLocal > rule.brightness_max) { brightnessOk = false; break; }
+          if (rule.brightness_min !== undefined && mwLocal < rule.brightness_min) { brightnessOk = false; break; }
+          checked = true;
+        } else {
+          if (rule.brightness_max !== undefined && bright > rule.brightness_max) { brightnessOk = false; break; }
+          if (rule.brightness_min !== undefined && bright < rule.brightness_min) { brightnessOk = false; break; }
+          checked = true;
+        }
+      }
+      if (!brightnessOk || !checked) continue;
+    }
     items.push({
       type: 'combo',
       text: `${ruleStars.join('+')}同宫：${rule.text}`,

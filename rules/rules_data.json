@@ -52,7 +52,8 @@
     {"name":"坐贵向贵格","cond":{"palace":"命宫","star":"天魁","duizhao":"天钺"},"text":"坐贵向贵格=命坐天魁对宫天钺（或反之），贵人运极强","severity":1,"src":"命运分析Ch11"},
     {"name":"文桂文华格","cond":{"same_palace":["文昌","文曲"]},"text":"文桂文华格=昌曲同宫，主文学才华出众科甲功名","severity":1,"src":"命运分析Ch11"},
     {"name":"左右同宫格","cond":{"same_palace":["左辅","右弼"]},"text":"左右同宫格=辅弼同宫助力极强，须会紫府方佳","severity":1,"src":"命运分析Ch11"},
-    {"name":"贪狼水桃花","cond":{"palace":"命宫","star":"贪狼","branch":["子"]},"text":"贪狼居子名曰水桃花，木得水生桃花力最强","severity":0,"src":"命运分析Ch10"}
+    {"name":"贪狼水桃花","cond":{"palace":"命宫","star":"贪狼","branch":["子"]},"text":"贪狼居子名曰水桃花，木得水生桃花力最强","severity":0,"src":"命运分析Ch10"},
+    {"name":"巨机同宫格","cond":{"same_palace":["天机","巨门"]},"text":"巨机同宫公卿之位（命在丑未尤佳，乙辛己丙生人至公卿）","severity":1,"src":"1.3骨髓赋+5章巨门"}
   ],
 
   "sihua_rules": [
@@ -102,7 +103,7 @@
     {"stars":["天府","廉贞"],"palace":"疾厄","text":"天府廉贞=皮肤病（湿火）","severity":1,"src":"5章天府疾"},
     {"stars":["贪狼","陀罗"],"branch":["寅"],"text":"风流彩杖格（贪狼寅宫陀罗同度）","severity":1,"src":"5章贪狼"},
     {"stars":["贪狼","擎羊"],"branch":["亥","子"],"text":"泛水桃花（贪狼羊陀亥子宫迷酒丧身）","severity":2,"src":"5章贪狼"},
-    {"stars":["廉贞","火星"],"any_palace":true,"text":"廉贞火星陷空=投河自缢","severity":3,"src":"5章廉贞"},
+    {"stars":["廉贞","火星"],"any_palace":true,"brightness_max":1,"text":"廉贞火星陷空=投河自缢（须廉贞陷地方论）","severity":3,"src":"5章廉贞"},
     {"stars":["文曲","破军"],"any_palace":true,"text":"破军文曲同度一生贫士更入水乡残疾","severity":2,"src":"5章破军"},
     {"stars":["禄存"],"palace":"命宫","alone_main":true,"text":"禄存独守命无吉化=看财奴","severity":1,"src":"5章禄存"},
     {"stars":["左辅"],"palace":"夫妻","text":"左辅或右弼在夫妻宫=定二婚","severity":1,"src":"5章左辅"},
