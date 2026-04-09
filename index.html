@@ -406,6 +406,64 @@ button#calcBtn:hover { background: #b22222; }
   font-size: 0.78em; color: #0055bb; background: none; border: none;
   cursor: pointer; padding: 2px 4px; text-decoration: underline;
 }
+
+/* ===== 合婚功能 ===== */
+#hehun-btn {
+  display: none; padding: 8px 28px; background: #8b1a1a; color: #fff;
+  border: none; border-radius: 5px; font-size: 0.95em; cursor: pointer;
+  font-family: inherit; letter-spacing: 3px; margin-left: 10px;
+}
+#hehun-btn:hover { background: #a52a2a; }
+#hehun-panel {
+  display: none; max-width: 900px; margin: 10px auto 0;
+  background: #fff8f5; border: 1px solid #d4978a; border-radius: 8px; padding: 16px 20px;
+}
+#hehun-panel h3 {
+  color: #8b1a1a; font-size: 1em; border-bottom: 1px solid #d4978a;
+  padding-bottom: 6px; letter-spacing: 2px; margin: 0 0 12px;
+}
+.hh-input-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.hh-input-row label { min-width: 70px; font-size: 0.88em; color: #5a3800; }
+.hh-input-row select, .hh-input-row input { font-family: inherit; font-size: 0.88em; padding: 3px 6px; }
+#hehun-calc-btn {
+  padding: 6px 20px; background: #8b1a1a; color: #fff; border: none;
+  border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 0.88em;
+  letter-spacing: 2px; margin-top: 4px;
+}
+#hehun-calc-btn:hover { background: #a52a2a; }
+.hh-section {
+  margin-bottom: 16px; padding: 12px 14px; background: #fff;
+  border: 1px solid #e8ccc0; border-radius: 6px;
+}
+.hh-section-title {
+  font-weight: bold; color: #8b1a1a; font-size: 0.92em;
+  margin-bottom: 8px; border-bottom: 1px dotted #d4978a; padding-bottom: 4px;
+}
+.hh-info { font-size: 0.85em; color: #555; margin-bottom: 6px; }
+.hh-match-item { margin: 6px 0; padding: 6px 10px; background: #fdf8f5; border-radius: 4px; font-size: 0.88em; line-height: 1.7; }
+.hh-cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.hh-card {
+  flex: 1; min-width: 120px; padding: 8px; border-radius: 6px;
+  text-align: center; font-size: 0.82em; line-height: 1.6; border: 1px solid #ddd;
+}
+.hh-card-lu  { background: #e8f5e9; border-color: #a5d6a7; }
+.hh-card-quan { background: #fff3e0; border-color: #ffcc80; }
+.hh-card-ke  { background: #e3f2fd; border-color: #90caf9; }
+.hh-card-ji  { background: #fce4ec; border-color: #ef9a9a; }
+.hh-card .hh-hua-label { font-weight: bold; font-size: 1em; }
+.hh-card .hh-star-name { margin: 2px 0; }
+.hh-card .hh-palace { color: #666; }
+.hh-tag-ji { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.8em; background: #e6f7e6; color: #1a7a1a; border: 1px solid #9ed09e; }
+.hh-tag-xiong { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.8em; background: #fde8e8; color: #a02020; border: 1px solid #e0a0a0; }
+.hh-tag-zhong { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.8em; background: #fff8e1; color: #b8860b; border: 1px solid #e0c880; }
+.hh-verdict { font-weight: bold; margin-top: 6px; font-size: 0.9em; }
+.hh-summary {
+  margin-top: 14px; padding: 12px 16px; background: #fef6f0;
+  border: 2px solid #d4978a; border-radius: 8px; line-height: 1.8; font-size: 0.9em;
+}
+.hh-stars { color: #DAA520; letter-spacing: 2px; }
+.hh-note { font-size: 0.8em; color: #888; margin-top: 8px; font-style: italic; }
+.hh-direction { font-size: 0.85em; color: #8b1a1a; font-weight: bold; margin: 10px 0 6px; }
 </style>
 </head>
 <body>
@@ -421,18 +479,19 @@ button#calcBtn:hover { background: #b22222; }
   <div class="form-row">
     <label>出生时辰</label>
     <select id="birthHour">
-      <option value="0">子时（23:01–01:00）</option>
-      <option value="1">丑时（01:01–03:00）</option>
-      <option value="2">寅时（03:01–05:00）</option>
-      <option value="3">卯时（05:01–07:00）</option>
-      <option value="4">辰时（07:01–09:00）</option>
-      <option value="5">巳时（09:01–11:00）</option>
-      <option value="6">午时（11:01–13:00）</option>
-      <option value="7">未时（13:01–15:00）</option>
-      <option value="8">申时（15:01–17:00）</option>
-      <option value="9">酉时（17:01–19:00）</option>
-      <option value="10">戌时（19:01–21:00）</option>
-      <option value="11">亥时（21:01–23:00）</option>
+      <option value="0">早子时（00:00–01:00）</option>
+      <option value="1">丑时（01:00–03:00）</option>
+      <option value="2">寅时（03:00–05:00）</option>
+      <option value="3">卯时（05:00–07:00）</option>
+      <option value="4">辰时（07:00–09:00）</option>
+      <option value="5">巳时（09:00–11:00）</option>
+      <option value="6">午时（11:00–13:00）</option>
+      <option value="7">未时（13:00–15:00）</option>
+      <option value="8">申时（15:00–17:00）</option>
+      <option value="9">酉时（17:00–19:00）</option>
+      <option value="10">戌时（19:00–21:00）</option>
+      <option value="11">亥时（21:00–23:00）</option>
+      <option value="12">晚子时（23:00–00:00）</option>
     </select>
   </div>
   <div class="form-row">
@@ -455,6 +514,43 @@ button#calcBtn:hover { background: #b22222; }
 
 <!-- Rule2 解读按钮与面板 -->
 <button id="rule2-btn" onclick="toggleRule2Panel()">解　读　命　盘</button>
+<button id="hehun-btn" onclick="toggleHehunPanel()">姻 缘 合 盘</button>
+<div id="hehun-panel">
+  <h3>合盘分析</h3>
+  <div id="hehun-input-area">
+    <div class="hh-input-row">
+      <label>对方阳历生日</label>
+      <input type="date" id="hh-birthDate" value="1992-01-01">
+    </div>
+    <div class="hh-input-row">
+      <label>对方出生时辰</label>
+      <select id="hh-birthHour">
+        <option value="0">早子时（00:00–01:00）</option>
+        <option value="1">丑时（01:00–03:00）</option>
+        <option value="2">寅时（03:00–05:00）</option>
+        <option value="3">卯时（05:00–07:00）</option>
+        <option value="4">辰时（07:00–09:00）</option>
+        <option value="5">巳时（09:00–11:00）</option>
+        <option value="6">午时（11:00–13:00）</option>
+        <option value="7">未时（13:00–15:00）</option>
+        <option value="8">申时（15:00–17:00）</option>
+        <option value="9">酉时（17:00–19:00）</option>
+        <option value="10">戌时（19:00–21:00）</option>
+        <option value="11">亥时（21:00–23:00）</option>
+        <option value="12">晚子时（23:00–00:00）</option>
+      </select>
+    </div>
+    <div class="hh-input-row">
+      <label>对方性别</label>
+      <select id="hh-gender">
+        <option value="male">男</option>
+        <option value="female">女</option>
+      </select>
+    </div>
+  </div>
+  <button id="hehun-calc-btn" onclick="runHehun()">开 始 合 盘</button>
+  <div id="hehun-result"></div>
+</div>
 <div id="rule2-panel">
   <h3>命盘解读</h3>
   <div class="r2-palace-tabs" id="r2-tabs"></div>
@@ -1227,12 +1323,17 @@ function calculate() {
 
   // 1. 读取输入
   const dateStr = document.getElementById('birthDate').value;
-  const hourBrIdx = parseInt(document.getElementById('birthHour').value);
+  const hourRaw = parseInt(document.getElementById('birthHour').value);
   const gender = document.getElementById('gender').value;
 
   if (!dateStr) { showError('请输入出生日期'); return; }
 
   const [y, m, d] = dateStr.split('-').map(Number);
+
+  // 晚子时(value=12)：地支仍为子(0)，日期不变（当日晚子时）
+  // 书载：「紫微斗数以晚23:01为当日晚子时起点」，不换日
+  const isLateZi = (hourRaw === 12);
+  const hourBrIdx = isLateZi ? 0 : hourRaw;
 
   // 2. 阳历→农历（使用 lunar-javascript 库）
   let lunar;
@@ -1436,7 +1537,7 @@ function calculate() {
     mingGongBrIdx,shenGongBrIdx,
     palaceMap,palaceStemMap,
     stars,sihua,mingzhu,shenzhu,gender,
-    daXianData, yearBrIdx, yearStemIdx, hourBrIdx
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi
   });
 }
 
@@ -1507,7 +1608,7 @@ function renderChart(data) {
     mingGongBrIdx,shenGongBrIdx,
     palaceMap,palaceStemMap,
     stars,sihua,mingzhu,shenzhu,gender,
-    daXianData, yearBrIdx, yearStemIdx, hourBrIdx
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi
   } = data;
 
   // 初始化全局状态
@@ -1533,8 +1634,9 @@ function renderChart(data) {
   const HUA_SYM = {禄:'禄',权:'权',科:'科',忌:'忌'};
 
   // 标题
+  const hourLabel = isLateZi ? '晚子时' : BRANCHES[hourBrIdx] + '时';
   document.getElementById('chart-title').textContent =
-    `${y}年${m}月${d}日（农历${lunarYear}年${lunarLeap?'闰':''}${lunarMonth}月${lunarDay}日）` +
+    `${y}年${m}月${d}日 ${hourLabel}（农历${lunarYear}年${lunarLeap?'闰':''}${lunarMonth}月${lunarDay}日）` +
     ` ${yearStem}${yearBr}年 ${JU_NAMES[ju]} ${gender==='male'?'男':'女'}命`;
 
   // 传统方形布局：顺时针从巳开始
@@ -1676,11 +1778,15 @@ function renderChart(data) {
   // 保存 Rule2 所需状态
   saveRule2State(palaceMap, stars, mingGongBrIdx, palaceStemMap);
 
-  // 显示解读按钮
+  // 显示解读按钮和合婚按钮
   document.getElementById('rule2-btn').style.display = 'block';
+  document.getElementById('hehun-btn').style.display = 'inline-block';
   // 重置解读面板（重新排盘时关闭旧解读）
   const r2panel = document.getElementById('rule2-panel');
   r2panel.style.display = 'none';
+  // 重置合婚面板
+  const hhpanel = document.getElementById('hehun-panel');
+  if (hhpanel) hhpanel.style.display = 'none';
 
   // 底部大限/流年导航
   renderBottomNav();
@@ -2638,6 +2744,466 @@ function selectRule2Tab(tabIdx) {
     btn.classList.toggle('active', i === tabIdx);
   });
   document.getElementById('r2-content').innerHTML = renderRule2Palace(brIdx);
+}
+
+// ============================================================
+//  合婚功能
+// ============================================================
+
+// 纯计算函数：为任意出生信息生成命盘数据（不渲染）
+function buildChartData(dateStr, hourRaw, gender) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const isLateZi = (hourRaw === 12);
+  const hourBrIdx = isLateZi ? 0 : hourRaw;
+
+  const sol = Solar.fromYmd(y, m, d);
+  const lun = sol.getLunar();
+  let lunarYear  = lun.getYear();
+  let lunarMonth = lun.getMonth();
+  const lunarDay   = lun.getDay();
+  const lunarLeap  = lunarMonth < 0;
+  if (lunarLeap) lunarMonth = Math.abs(lunarMonth) + 1;
+
+  const yearBrIdx   = ((lunarYear - 4) % 12 + 12) % 12;
+  const yearStemIdx = ((lunarYear - 4) % 10 + 10) % 10;
+  const yearStem    = STEMS[yearStemIdx];
+  const yearBr      = BRANCHES[yearBrIdx];
+
+  const monthBrId = monthBranchIdx(lunarMonth);
+  const mingGongBrIdx = (monthBrId - hourBrIdx + 12) % 12;
+
+  const PALACE_NAMES = ['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','奴仆','官禄','田宅','福德','父母'];
+  const palaceMap = {};
+  for (let i = 0; i < 12; i++) {
+    palaceMap[(mingGongBrIdx - i + 12) % 12] = PALACE_NAMES[i];
+  }
+  // 反向映射：宫名 → 地支索引
+  const palaceNameToIdx = {};
+  for (const [brIdx, name] of Object.entries(palaceMap)) {
+    palaceNameToIdx[name] = parseInt(brIdx);
+  }
+
+  const palaceStemMap = {};
+  for (let bi = 0; bi < 12; bi++) {
+    palaceStemMap[bi] = STEMS[palaceStemIdx(yearStem, bi)];
+  }
+
+  const mingGongStem = palaceStemMap[mingGongBrIdx];
+  const mingGongBr   = BRANCHES[mingGongBrIdx];
+  const ju = calcJu(mingGongStem, mingGongBr);
+
+  const ziweiPos  = getZiweiPos(ju, lunarDay);
+  const tianfuPos = getTianfuPos(ziweiPos);
+  const mainStars = getMainStars(ziweiPos, tianfuPos);
+  const sihua = SIHUA[yearStem];
+  const monthStars = getMonthStars(lunarMonth);
+  const hourStars = getHourStars(hourBrIdx);
+  const yearBrStars = getYearBranchStars(yearBrIdx);
+  const yearStemStars = getYearStemStars(yearStem);
+  const huoLing = getHuoLing(yearBrIdx, hourBrIdx);
+
+  // 汇总星曜
+  const stars = {};
+  for (let i = 0; i < 12; i++) stars[i] = { main:[], aux:[], hua:{} };
+  for (const [name, pos] of Object.entries(mainStars)) stars[pos].main.push(name);
+  for (const [name, pos] of Object.entries(monthStars)) stars[pos].aux.push(name);
+  for (const [name, pos] of Object.entries(hourStars)) stars[pos].aux.push(name);
+  for (const [name, pos] of Object.entries(yearBrStars)) {
+    if (typeof pos === 'number') stars[pos].aux.push(name);
+  }
+  for (const [name, pos] of Object.entries(yearStemStars)) {
+    if (typeof pos === 'number' && !name.startsWith('截空')) stars[pos].aux.push(name);
+  }
+  for (const [name, pos] of Object.entries(huoLing)) stars[pos].aux.push(name);
+  // 四化
+  for (const [huaType, starName] of Object.entries(sihua)) {
+    for (const [name, pos] of Object.entries(mainStars)) {
+      if (name === starName) stars[pos].hua[starName] = huaType;
+    }
+    const auxMap = {...monthStars,...hourStars};
+    for (const [name, pos] of Object.entries(auxMap)) {
+      if (name === starName) stars[pos].hua[starName] = huaType;
+    }
+  }
+
+  return {
+    y, m, d, gender, yearStem, yearBr, yearBrIdx, yearStemIdx,
+    lunarYear, lunarMonth, lunarDay, lunarLeap,
+    mingGongBrIdx, palaceMap, palaceNameToIdx, palaceStemMap,
+    stars, mainStars, sihua, ju, isLateZi, hourBrIdx
+  };
+}
+
+// 在命盘中查找某颗星所在的地支索引，搜main+aux
+function findStarBrIdx(stars, starName) {
+  for (let brIdx = 0; brIdx < 12; brIdx++) {
+    if (stars[brIdx].main.includes(starName) || stars[brIdx].aux.includes(starName)) {
+      return brIdx;
+    }
+  }
+  return -1;
+}
+
+// 获取某宫的所有主星
+function getPalaceMainStars(chart, palaceName) {
+  const brIdx = chart.palaceNameToIdx[palaceName];
+  if (brIdx === undefined) return [];
+  return chart.stars[brIdx].main;
+}
+// 获取某宫的所有星（主+辅）
+function getPalaceAllStars(chart, palaceName) {
+  const brIdx = chart.palaceNameToIdx[palaceName];
+  if (brIdx === undefined) return [];
+  return [...chart.stars[brIdx].main, ...chart.stars[brIdx].aux];
+}
+
+// ---- 三合派合婚 ----
+function sanHePaiMatch(chartA, chartB) {
+  const results = [];
+
+  // 辅助：检查某方的某宫是否含某星（main+aux）
+  function hasStarInPalace(chart, palaceName, starName) {
+    return getPalaceAllStars(chart, palaceName).includes(starName);
+  }
+  function hasStarInPalaces(chart, palaces, starName) {
+    return palaces.some(p => hasStarInPalace(chart, p, starName));
+  }
+
+  // 检查某方夫妻宫主星
+  const aFuQiMain = getPalaceMainStars(chartA, '夫妻');
+  const bFuQiMain = getPalaceMainStars(chartB, '夫妻');
+  const aMingMain = getPalaceMainStars(chartA, '命宫');
+  const bMingMain = getPalaceMainStars(chartB, '命宫');
+
+  // 规则1：火星独守夫妻 ↔ 擎羊在命/夫妻 → 绝配
+  function checkHuoQing(me, other, meLabel, otherLabel) {
+    const meFuQiAll = getPalaceAllStars(me, '夫妻');
+    const meFuQiMain = getPalaceMainStars(me, '夫妻');
+    if (meFuQiAll.includes('火星') && meFuQiMain.length === 0) {
+      if (hasStarInPalaces(other, ['命宫','夫妻'], '擎羊')) {
+        results.push({
+          stars: '火星('+meLabel+'夫妻) ↔ 擎羊('+otherLabel+'命/夫妻)',
+          rating: 5, text: '火星独守夫妻与擎羊相配，称为「绝配」',
+          src: '三合派'
+        });
+      }
+    }
+  }
+  checkHuoQing(chartA, chartB, '甲方', '乙方');
+  checkHuoQing(chartB, chartA, '乙方', '甲方');
+
+  // 规则2：巨门在子午线互为夫妻 → 绝配
+  const aFuQiBr = chartA.palaceNameToIdx['夫妻'];
+  const bFuQiBr = chartB.palaceNameToIdx['夫妻'];
+  if (aFuQiMain.includes('巨门') && (aFuQiBr === 0 || aFuQiBr === 6) &&
+      bFuQiMain.includes('巨门') && (bFuQiBr === 0 || bFuQiBr === 6)) {
+    results.push({
+      stars: '巨门(甲方夫妻子午线) ↔ 巨门(乙方夫妻子午线)',
+      rating: 5, text: '巨门在子午线互为夫妻，同病相怜，称为「绝配」',
+      src: '三合派'
+    });
+  }
+
+  // 规则3/4：巨门 ↔ 天梁/太阳
+  function checkJuMen(me, other, meLabel, otherLabel) {
+    const meFuQi = getPalaceMainStars(me, '夫妻');
+    const otherMing = getPalaceMainStars(other, '命宫');
+    const otherFuQi = getPalaceMainStars(other, '夫妻');
+    const otherAll = [...otherMing, ...otherFuQi];
+    if (meFuQi.includes('巨门')) {
+      if (otherAll.includes('天梁')) {
+        results.push({
+          stars: '巨门('+meLabel+'夫妻) ↔ 天梁('+otherLabel+')',
+          rating: 4, text: '天梁为大人星喜照顾他人，与巨门组配堪称「美眷」',
+          src: '三合派'
+        });
+      }
+      if (otherAll.includes('太阳')) {
+        results.push({
+          stars: '巨门('+meLabel+'夫妻) ↔ 太阳('+otherLabel+')',
+          rating: 3, text: '太阳为光明之星，与巨门相配也不错',
+          src: '三合派'
+        });
+      }
+    }
+  }
+  checkJuMen(chartA, chartB, '甲方', '乙方');
+  checkJuMen(chartB, chartA, '乙方', '甲方');
+
+  // 规则5：紫微独坐夫妻 ↔ 太阳/天府/贪狼/天相/禄存坐命
+  const ziWeiMatch = ['太阳','天府','贪狼','天相','禄存'];
+  function checkZiWei(me, other, meLabel, otherLabel) {
+    const meFuQi = getPalaceMainStars(me, '夫妻');
+    if (meFuQi.length === 1 && meFuQi[0] === '紫微') {
+      const otherMingAll = getPalaceAllStars(other, '命宫');
+      const matched = ziWeiMatch.filter(s => otherMingAll.includes(s));
+      if (matched.length > 0) {
+        // 加分：是否有左右昌曲
+        const extras = ['左辅','右弼','文昌','文曲'].filter(s => otherMingAll.includes(s));
+        let r = 4;
+        let extraText = '';
+        if (extras.length > 0) { r = 5; extraText = '，兼会' + extras.join('、') + '更佳'; }
+        results.push({
+          stars: '紫微独坐('+meLabel+'夫妻) ↔ '+matched.join('、')+'('+otherLabel+'命宫)',
+          rating: r, text: '紫微独坐夫妻与'+matched.join('、')+'坐命者相配为佳' + extraText,
+          src: '三合派'
+        });
+      }
+    }
+  }
+  checkZiWei(chartA, chartB, '甲方', '乙方');
+  checkZiWei(chartB, chartA, '乙方', '甲方');
+
+  return results;
+}
+
+// ---- 河洛派合婚（单向：用srcChart的生年干在destChart上飞四化）----
+function heluoPaiOneway(srcChart, destChart, srcLabel, destLabel) {
+  const srcStem = srcChart.yearStem;
+  const sihua = SIHUA[srcStem]; // {禄:star, 权:star, 科:star, 忌:star}
+
+  // 线位分组
+  const SANHE = ['命宫','财帛','官禄'];
+  const FUJI = ['父母','疾厄'];
+  const XIONGYOU = ['兄弟','奴仆'];
+  const TIANFU = ['田宅','福德'];
+  const MINGQIAN = ['命宫','迁移'];
+  const CAIFU = ['财帛','福德'];
+
+  const cards = [];
+  let score = 0;
+
+  for (const [huaType, starName] of Object.entries(sihua)) {
+    const brIdx = findStarBrIdx(destChart.stars, starName);
+    const palaceName = brIdx >= 0 ? destChart.palaceMap[brIdx] : '未知';
+    let line = '';
+    let verdict = '';
+    let verdictClass = 'hh-tag-zhong';
+
+    if (huaType === '忌') {
+      // 化忌特别判断
+      if (MINGQIAN.includes(palaceName)) {
+        line = '命迁线'; verdict = '必为怨偶，不可配'; verdictClass = 'hh-tag-xiong'; score -= 3;
+      } else if (CAIFU.includes(palaceName)) {
+        line = '财福线'; verdict = '必为怨偶，不可配'; verdictClass = 'hh-tag-xiong'; score -= 3;
+      } else if (FUJI.includes(palaceName)) {
+        line = '父疾线'; verdict = '忌入父疾，须注意'; verdictClass = 'hh-tag-zhong'; score -= 1;
+      } else if (XIONGYOU.includes(palaceName)) {
+        line = '兄友线'; verdict = '忌入兄友，事业合作须慎'; verdictClass = 'hh-tag-zhong'; score -= 1;
+      } else if (TIANFU.includes(palaceName)) {
+        line = '田福'; verdict = '忌入田福，家宅须注意'; verdictClass = 'hh-tag-zhong'; score -= 1;
+      } else {
+        line = palaceName; verdict = '化忌入' + palaceName; verdictClass = 'hh-tag-zhong'; score -= 1;
+      }
+    } else {
+      // 化三吉
+      if (SANHE.includes(palaceName)) {
+        line = '三合方'; verdict = '能使格调高，给予助益'; verdictClass = 'hh-tag-ji'; score += 2;
+      } else if (FUJI.includes(palaceName)) {
+        line = '父疾线'; verdict = '文书贵人，助人格升华'; verdictClass = 'hh-tag-ji'; score += 2;
+      } else if (XIONGYOU.includes(palaceName)) {
+        line = '兄友线'; verdict = '助事业成功'; verdictClass = 'hh-tag-ji'; score += 2;
+      } else if (TIANFU.includes(palaceName)) {
+        line = '田福'; verdict = '佳配'; verdictClass = 'hh-tag-ji'; score += 1;
+      } else {
+        line = palaceName; verdict = '化' + huaType + '入' + palaceName; verdictClass = 'hh-tag-zhong'; score += 1;
+      }
+    }
+
+    cards.push({ huaType, starName, palaceName, line, verdict, verdictClass });
+  }
+
+  // 额外判断：对方命宫干化禄入我命/疾
+  const srcMingBr = srcChart.mingGongBrIdx;
+  const srcMingStem = srcChart.palaceStemMap[srcMingBr];
+  const srcMingSihua = SIHUA[srcMingStem];
+  if (srcMingSihua) {
+    const luStar = srcMingSihua['禄'];
+    const luBrIdx = findStarBrIdx(destChart.stars, luStar);
+    if (luBrIdx >= 0) {
+      const luPalace = destChart.palaceMap[luBrIdx];
+      if (luPalace === '命宫' || luPalace === '疾厄') {
+        score += 2;
+        cards.push({
+          huaType: '额外', starName: luStar,
+          palaceName: luPalace, line: '命宫干化禄',
+          verdict: srcLabel + '命宫干化禄入' + destLabel + luPalace + '，感情深厚',
+          verdictClass: 'hh-tag-ji'
+        });
+      }
+    }
+  }
+
+  // 总评
+  let summary = '';
+  if (score >= 5) summary = '极佳';
+  else if (score >= 3) summary = '良好';
+  else if (score >= 1) summary = '尚可';
+  else if (score >= -1) summary = '平淡';
+  else summary = '欠佳';
+
+  return { cards, score, summary, srcLabel, destLabel, srcStem };
+}
+
+// 星级渲染
+function renderStars(score, max) {
+  const s = Math.max(0, Math.min(max, score));
+  return '<span class="hh-stars">' + '★'.repeat(s) + '☆'.repeat(max - s) + '</span>';
+}
+
+// 分数转星级（5星制）
+function scoreToStars(score) {
+  if (score >= 5) return 5;
+  if (score >= 3) return 4;
+  if (score >= 1) return 3;
+  if (score >= -1) return 2;
+  return 1;
+}
+
+// ---- 渲染合婚报告 ----
+function renderHehunReport(chartA, chartB, infoA, infoB) {
+  const sanhe = sanHePaiMatch(chartA, chartB);
+  const heluoAB = heluoPaiOneway(chartB, chartA, '乙方', '甲方'); // 乙方干在甲方盘
+  const heluoBA = heluoPaiOneway(chartA, chartB, '甲方', '乙方'); // 甲方干在乙方盘
+
+  let html = '';
+
+  // 标题
+  html += '<div class="hh-section"><div class="hh-section-title">合盘双方信息</div>';
+  html += '<div class="hh-info">甲方：' + infoA + '</div>';
+  html += '<div class="hh-info">乙方：' + infoB + '</div></div>';
+
+  // 一、三合派
+  html += '<div class="hh-section"><div class="hh-section-title">一、三合派合婚（星情配对）</div>';
+  const aFuQiBr = chartA.palaceNameToIdx['夫妻'];
+  const bFuQiBr = chartB.palaceNameToIdx['夫妻'];
+  html += '<div class="hh-info">甲方夫妻宫（' + BRANCHES[aFuQiBr] + '宫）：' +
+    (chartA.stars[aFuQiBr].main.join(' ') || '空宫') + '</div>';
+  html += '<div class="hh-info">乙方夫妻宫（' + BRANCHES[bFuQiBr] + '宫）：' +
+    (chartB.stars[bFuQiBr].main.join(' ') || '空宫') + '</div>';
+  html += '<div class="hh-info">甲方命宫：' +
+    (chartA.stars[chartA.mingGongBrIdx].main.join(' ') || '空宫') +
+    '　乙方命宫：' + (chartB.stars[chartB.mingGongBrIdx].main.join(' ') || '空宫') + '</div>';
+
+  if (sanhe.length === 0) {
+    html += '<div class="hh-match-item">未发现书中记载的特定星情配对。</div>';
+  } else {
+    for (const m of sanhe) {
+      html += '<div class="hh-match-item">';
+      html += '<b>' + m.stars + '</b><br>';
+      html += m.text + '　' + renderStars(m.rating, 5);
+      html += '</div>';
+    }
+  }
+  html += '</div>';
+
+  // 二、河洛派
+  html += '<div class="hh-section"><div class="hh-section-title">二、河洛派合婚（四化飞星合盘）</div>';
+
+  // 方向1：乙方干 → 甲方盘
+  html += renderHeluoDirection(heluoAB);
+  // 方向2：甲方干 → 乙方盘
+  html += renderHeluoDirection(heluoBA);
+  html += '</div>';
+
+  // 三、综合评价
+  const sanheScore = sanhe.length > 0 ? Math.round(sanhe.reduce((s,m) => s + m.rating, 0) / sanhe.length) : 0;
+  const abStars = scoreToStars(heluoAB.score);
+  const baStars = scoreToStars(heluoBA.score);
+
+  html += '<div class="hh-summary">';
+  html += '<div class="hh-section-title">三、综合评价</div>';
+  if (sanhe.length > 0) {
+    html += '三合派星情：' + renderStars(sanheScore, 5) + ' ' + (sanheScore >= 4 ? '良好' : '一般') + '<br>';
+  }
+  html += '河洛派（乙→甲）：' + renderStars(abStars, 5) + ' ' + heluoAB.summary + '<br>';
+  html += '河洛派（甲→乙）：' + renderStars(baStars, 5) + ' ' + heluoBA.summary + '<br>';
+
+  // 总评文字
+  const totalScore = (heluoAB.score + heluoBA.score) / 2 + sanheScore;
+  html += '<br><div class="hh-verdict">';
+  if (totalScore >= 6) {
+    html += '总评：双方缘分深厚，互为助益，婚姻可期。';
+  } else if (totalScore >= 3) {
+    html += '总评：双方有一定缘分，部分方面互补，婚姻中需相互包容。';
+  } else if (totalScore >= 0) {
+    html += '总评：双方缘分一般，互动中有利有弊，需多沟通理解。';
+  } else {
+    html += '总评：双方互动中阻力较多，婚姻经营需要更多智慧和付出。';
+  }
+  html += '</div>';
+  html += '<div class="hh-note">注意：合盘仅为参考，实际婚姻受大运流年影响，建议结合双方大限综合研判。</div>';
+  html += '</div>';
+
+  return html;
+}
+
+function renderHeluoDirection(heluo) {
+  let html = '';
+  html += '<div class="hh-direction">▶ ' + heluo.srcLabel + '生年干（' + heluo.srcStem +
+    '）在' + heluo.destLabel + '盘飞四化：</div>';
+  html += '<div class="hh-cards">';
+  const huaColors = {'禄':'hh-card-lu','权':'hh-card-quan','科':'hh-card-ke','忌':'hh-card-ji','额外':'hh-card-lu'};
+  for (const c of heluo.cards) {
+    html += '<div class="hh-card ' + (huaColors[c.huaType]||'') + '">';
+    html += '<div class="hh-hua-label">化' + c.huaType + '</div>';
+    html += '<div class="hh-star-name">' + c.starName + '</div>';
+    html += '<div class="hh-palace">' + heluo.destLabel + ' ' + c.palaceName + '</div>';
+    if (c.line && c.line !== c.palaceName) html += '<div style="font-size:0.78em;color:#888">(' + c.line + ')</div>';
+    html += '<div><span class="' + c.verdictClass + '">' + c.verdict + '</span></div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '<div class="hh-verdict" style="font-size:0.85em">综合：' + renderStars(scoreToStars(heluo.score), 5) + ' ' + heluo.summary + '</div>';
+  return html;
+}
+
+// ---- 入口函数 ----
+function toggleHehunPanel() {
+  const panel = document.getElementById('hehun-panel');
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function runHehun() {
+  if (!_chartState || !_rule2State) {
+    alert('请先排盘再进行合盘分析');
+    return;
+  }
+
+  const dateStr = document.getElementById('hh-birthDate').value;
+  const hourRaw = parseInt(document.getElementById('hh-birthHour').value);
+  const gender = document.getElementById('hh-gender').value;
+
+  if (!dateStr) { alert('请输入对方出生日期'); return; }
+
+  // 甲方：当前已排盘的数据
+  const aDateStr = document.getElementById('birthDate').value;
+  const aHourRaw = parseInt(document.getElementById('birthHour').value);
+  const aGender = document.getElementById('gender').value;
+
+  let chartA, chartB;
+  try {
+    chartA = buildChartData(aDateStr, aHourRaw, aGender);
+    chartB = buildChartData(dateStr, hourRaw, gender);
+  } catch(e) {
+    alert('命盘计算出错：' + e.message);
+    return;
+  }
+
+  const hourLabelA = chartA.isLateZi ? '晚子时' : BRANCHES[chartA.hourBrIdx] + '时';
+  const hourLabelB = chartB.isLateZi ? '晚子时' : BRANCHES[chartB.hourBrIdx] + '时';
+  const infoA = chartA.y + '年' + chartA.m + '月' + chartA.d + '日 ' + hourLabelA + ' ' + (aGender==='male'?'男':'女') +
+    '（' + chartA.yearStem + chartA.yearBr + '年）';
+  const infoB = chartB.y + '年' + chartB.m + '月' + chartB.d + '日 ' + hourLabelB + ' ' + (gender==='male'?'男':'女') +
+    '（' + chartB.yearStem + chartB.yearBr + '年）';
+
+  const resultEl = document.getElementById('hehun-result');
+  resultEl.innerHTML = renderHehunReport(chartA, chartB, infoA, infoB);
 }
 
 </script>

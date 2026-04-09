@@ -15,3 +15,5 @@ rules/chapters_detail.txt
 rules/verification_for_notebooklm.md
 __pycache__/
 *.pyc
+node_modules/
+.claude/
