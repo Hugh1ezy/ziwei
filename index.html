@@ -958,11 +958,11 @@ function calcDaXian(mingGongBrIdx, ju, yearBrIdx, gender, lunarYear) {
   const forward = (isYang && isMale) || (!isYang && !isMale); // 阳男或阴女→顺行
   const result = [];
   for (let n = 0; n < 12; n++) {
-    // 顺行：按宫名顺序（命→兄→夫→...），brIdx递减
-    // 逆行：逆宫名顺序（命→父→福→...），brIdx递增
+    // 顺行：地支顺序（brIdx递增，命→父→福→田→...）
+    // 逆行：地支逆序（brIdx递减，命→兄→夫→子→...）
     const brIdx = forward
-      ? (mingGongBrIdx - n + 12) % 12
-      : (mingGongBrIdx + n) % 12;
+      ? (mingGongBrIdx + n) % 12
+      : (mingGongBrIdx - n + 12) % 12;
     const ageStart = ju + n * 10;
     const ageEnd   = ju + (n + 1) * 10 - 1;
     const yearStart = lunarYear + ageStart - 1;
@@ -1017,13 +1017,13 @@ function calcLiuShi(liuRiBr, hour) {
 }
 
 // ---- 博士十二神（来源：rules_book1.md §19）----
-// 从禄存宫起，阳男阴女顺行(-1/宫)，阴男阳女逆行(+1/宫)
+// 从禄存宫起，阳男阴女顺行(brIdx+1)，阴男阳女逆行(brIdx-1)
 const BOSHI_NAMES = ['博士','力士','青龙','小耗','将军','奏书','飞廉','喜神','病符','大耗','伏兵','官符'];
 function getBoshiStars(lusunPos, yearBrIdx, gender) {
   const isYang = (yearBrIdx % 2 === 0);
   const isMale = (gender === 'male');
   const forward = (isYang && isMale) || (!isYang && !isMale); // 阳男阴女顺行
-  const dir = forward ? -1 : 1; // 顺行=宫名顺序=brIdx递减
+  const dir = forward ? 1 : -1; // 顺行=地支顺序=brIdx递增
   const result = {};
   for (let n = 0; n < 12; n++) {
     const br = ((lusunPos + dir * n) % 12 + 12) % 12;

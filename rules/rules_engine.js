@@ -1024,6 +1024,12 @@ function generateSihuaHighlight(ctx) {
 
 /* ========== 渲染函数 (updated for P1-P4) ========== */
 
+function _boldAfterColon(text) {
+  const idx = text.indexOf('：');
+  if (idx < 0) return text;
+  return text.slice(0, idx + 1) + '<b>' + text.slice(idx + 1) + '</b>';
+}
+
 function renderEngineResult(palaceResult, globalResults) {
   if (!palaceResult || !palaceResult.items || palaceResult.items.length === 0) return '';
   let html = '<div class="engine-result">';
@@ -1036,7 +1042,7 @@ function renderEngineResult(palaceResult, globalResults) {
     else if (sev >= 2) cls = 'eng-warn';
     else if (sev >= 1) cls = 'eng-normal';
     else if (sev < 0) cls = 'eng-good';
-    html += `<div class="eng-item ${cls}">${item.text}</div>`;
+    html += `<div class="eng-item ${cls}">${_boldAfterColon(item.text)}</div>`;
   }
 
   if (palaceResult.palace === '命宫' && globalResults) {
@@ -1044,7 +1050,7 @@ function renderEngineResult(palaceResult, globalResults) {
     if (globalResults._geju?.length > 0) {
       html += '<div class="eng-section-title">★ 格局</div>';
       for (const g of globalResults._geju) {
-        html += `<div class="eng-item eng-geju">${g.name}：${g.text}</div>`;
+        html += `<div class="eng-item eng-geju">${g.name}：<b>${g.text}</b></div>`;
       }
     }
     // P3: 夹格
@@ -1052,37 +1058,46 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">夹格分析</div>';
       for (const j of globalResults._jiaGe) {
         const cls = j.severity >= 2 ? 'eng-warn' : j.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${j.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(j.text)}</div>`;
       }
     }
     // 本对宫
     if (globalResults._benduigong?.length > 0) {
       html += '<div class="eng-section-title">本对宫强弱</div>';
       for (const b of globalResults._benduigong) {
-        html += `<div class="eng-item eng-neutral">${b.text}</div>`;
+        html += `<div class="eng-item eng-neutral">${_boldAfterColon(b.text)}</div>`;
       }
     }
     // 女命
     if (globalResults._female?.length > 0) {
       html += '<div class="eng-section-title">女命专论</div>';
       for (const f of globalResults._female) {
-        html += `<div class="eng-item ${f.severity >= 2 ? 'eng-warn' : 'eng-neutral'}">${f.text}</div>`;
+        html += `<div class="eng-item ${f.severity >= 2 ? 'eng-warn' : 'eng-neutral'}">${_boldAfterColon(f.text)}</div>`;
       }
     }
     // 飞宫单层
     if (globalResults._feigong?.length > 0) {
       html += '<div class="eng-section-title">飞宫四化</div>';
+      html += '<div class="eng-item eng-neutral" style="color:#666;font-size:0.88em;line-height:1.5;border-left:3px solid #ccc;padding-left:8px;margin-bottom:6px">'
+        + '读法：「X宫干 飞Y星化Z 入W宫」= X宫通过天干让Y星产生Z变化，落到W宫——化禄是助力，化忌是压力。<br>'
+        + '• 自化（回本宫）= 这个宫自身在变化&emsp;• 冲对宫 = 间接给对面宫位施压<br>'
+        + '• 「原局化禄」冲突 = 出生年的好运被削弱<br>'
+        + '<b>例</b>：「财帛干飞天机化忌冲福德」→ 理财压力（财帛化忌）波及内心安宁（冲福德）</div>';
       for (const f of globalResults._feigong) {
         const cls = f.severity >= 2 ? 'eng-warn' : f.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${f.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(f.text)}</div>`;
       }
     }
     // P1: 链式飞宫
     if (globalResults._feigongChain?.length > 0) {
       html += '<div class="eng-section-title">链式飞宫追踪</div>';
+      html += '<div class="eng-item eng-neutral" style="color:#666;font-size:0.88em;line-height:1.5;border-left:3px solid #ccc;padding-left:8px;margin-bottom:6px">'
+        + '读法：「A宫忌→B宫→转忌→C宫」= A的压力先传到B，B再传给C，像多米诺骨牌。<br>'
+        + '• 忌转忌（雪上加霜）= 压力经中转后加重&emsp;• 禄转忌（得中有失）= 助力中转后反成压力<br>'
+        + '<b>例</b>：「财帛忌→福德→转忌→兄弟」→ 财务压力先影响心态（福德），再影响人际（兄弟）</div>';
       for (const f of globalResults._feigongChain) {
         const cls = f.severity >= 3 ? 'eng-severe' : f.severity >= 2 ? 'eng-warn' : f.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${f.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(f.text)}</div>`;
       }
     }
     // P2: 自化叠化
@@ -1090,7 +1105,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">自化叠化</div>';
       for (const d of globalResults._diehua) {
         const cls = d.severity >= 3 ? 'eng-severe' : d.severity >= 2 ? 'eng-warn' : d.severity < 0 ? 'eng-good' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${d.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(d.text)}</div>`;
       }
     }
     // 最大凶象/最大吉象/身宫（原摘要内容，移入命宫tab）
@@ -1098,7 +1113,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">四化要点</div>';
       for (const item of globalResults._sihuaHighlight) {
         const cls = item.type === 'severe' ? 'eng-severe' : item.type === 'good' ? 'eng-good' : item.type === 'warn' ? 'eng-warn' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${item.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(item.text)}</div>`;
       }
     }
     // 六合
@@ -1106,7 +1121,7 @@ function renderEngineResult(palaceResult, globalResults) {
       html += '<div class="eng-section-title">六合融合</div>';
       for (const l of globalResults._liuhe) {
         const cls = l.severity >= 1 ? 'eng-warn' : 'eng-neutral';
-        html += `<div class="eng-item ${cls}">${l.text}</div>`;
+        html += `<div class="eng-item ${cls}">${_boldAfterColon(l.text)}</div>`;
       }
     }
     // 大限走势 + 大限四化（合并，按年龄段折叠）
@@ -1133,14 +1148,14 @@ function renderEngineResult(palaceResult, globalResults) {
         if (trend?.items) {
           for (const item of trend.items) {
             const cls = item.severity >= 3 ? 'eng-severe' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-            html += `<div class="eng-item ${cls}">${item.text}</div>`;
+            html += `<div class="eng-item ${cls}">${_boldAfterColon(item.text)}</div>`;
           }
         }
         // 四化详析内容
         if (detail?.items) {
           for (const item of detail.items) {
             const cls = item.severity >= 3 ? 'eng-severe' : item.severity >= 2 ? 'eng-warn' : item.severity < 0 ? 'eng-good' : 'eng-neutral';
-            html += `<div class="eng-item ${cls}">${item.text}</div>`;
+            html += `<div class="eng-item ${cls}">${_boldAfterColon(item.text)}</div>`;
           }
         }
         html += `</div>`;
