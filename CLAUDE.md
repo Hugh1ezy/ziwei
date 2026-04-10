@@ -5,6 +5,8 @@
 - 每次 git push 后，必须立即执行 `npx wrangler pages deploy . --project-name=ziwei --commit-dirty=true --commit-hash="$(git rev-parse HEAD)"` 部署到 Cloudflare Pages
 - 部署完成后主动告知用户"网页端已更新"并附上最新 commit hash
 - 线上地址：https://ziwei-e0i.pages.dev/（Cloudflare Pages，Direct Upload 模式，无 Git 自动部署）
+- **每次修改代码后必须同步更新线上网页**：git push + wrangler deploy 缺一不可
+- 修复或功能变更后，使用浏览器打开 https://ziwei-e0i.pages.dev/ 实际验证
 - GitHub Pages 已弃用
 
 ## 紫微斗数排盘铁律
