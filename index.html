@@ -803,15 +803,15 @@ function getHourStars(hourBrIdx) {
   const wenchang = (10 - hourBrIdx + 12) % 12;
   // 文曲：从辰(4)起子时，顺时针
   const wenqu = (4 + hourBrIdx) % 12;
-  // 天空：从亥(11)起子时，逆时针
-  const tiankong = (11 - hourBrIdx + 12) % 12;
+  // 地空：从亥(11)起子时，逆时针
+  const dikong = (11 - hourBrIdx + 12) % 12;
   // 地劫：从亥(11)起子时，顺时针
   const dijie = (11 + hourBrIdx) % 12;
   // 台辅：从午(6)起子时，顺时针
   const taifu = (6 + hourBrIdx) % 12;
   // 封诰：从寅(2)起子时，顺时针
   const fenggao = (2 + hourBrIdx) % 12;
-  return { '文昌':wenchang,'文曲':wenqu,'天空':tiankong,
+  return { '文昌':wenchang,'文曲':wenqu,'地空':dikong,
            '地劫':dijie,'台辅':taifu,'封诰':fenggao };
 }
 
@@ -870,11 +870,15 @@ function getYearBranchStars(yearBrIdx) {
   const guasu_map = [10,10,1,1,1,4,4,4,7,7,7,10];
   const guasu = guasu_map[yearBrIdx];
 
+  // 天空：从丑(1)起子年，顺时针
+  const tiankong = (1 + yearBrIdx) % 12;
+
   return {
     '天喜':tianxi2,'红鸾':hongluan,'天虚':tianxu,'天哭':tianku,
     '天德':tiande,'龙池':longchi,'凤阁':fengge,'解神':jieshen,
     '天马':tianma,'蜚廉':feilian,'大耗':dahao,'破碎':pocui2,
-    '华盖':huagai,'劫煞':jiesha,'咸池':xianchi,'孤辰':guchen,'寡宿':guasu
+    '华盖':huagai,'劫煞':jiesha,'咸池':xianchi,'孤辰':guchen,'寡宿':guasu,
+    '天空':tiankong
   };
 }
 
@@ -2639,7 +2643,7 @@ function renderRule2Palace(branchIdx) {
   // === 吉煞总结标签 ===
   function makeJiShaTag(brIdx) {
     const JI = ['左辅','右弼','天魁','天钺','文昌','文曲','禄存','天马'];
-    const SHA = ['擎羊','陀罗','火星','铃星','天空','地劫'];
+    const SHA = ['擎羊','陀罗','火星','铃星','地空','地劫'];
     const sf = [brIdx, (brIdx+4)%12, (brIdx+6)%12, (brIdx+8)%12];
     let ji=0, sha=0;
     for (const b of sf) {
