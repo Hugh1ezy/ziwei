@@ -74,10 +74,10 @@ function palaceType(palaceName) {
   return types;
 }
 
-/* P0: 庙旺亮度查询 */
+/* P0: 庙旺亮度查询（7级：0=陷 1=不 2=平 3=利 4=得 5=旺 6=庙）*/
 function getStarBrightness(ctx, starName, brIdx) {
   if (!ctx.miaoWang || !ctx.miaoWang[starName]) return -1;
-  return ctx.miaoWang[starName][brIdx]; // 0=陷 1=得 2=旺 3=庙
+  return ctx.miaoWang[starName][brIdx]; // 0=陷 1=不 2=平 3=利 4=得 5=旺 6=庙
 }
 
 /* P3: 获取某宫所有星+四化标签 */
@@ -990,7 +990,7 @@ function generateSihuaHighlight(ctx) {
     if (jiName === '太阳' || jiName === '太阴') {
       const bright = getStarBrightness(ctx, jiName, jiBr);
       const mwLocal = jiBr !== undefined ? (ctx.stars[jiBr]?.mw?.[jiName] ?? -1) : -1;
-      if (bright >= 2 || mwLocal >= 2) jiReversed = true;
+      if (bright >= 5 || mwLocal >= 5) jiReversed = true; // 旺(5)或庙(6)
     }
     const meaning = JI_MEANING[jiName] || '主不顺';
     if (jiReversed) {

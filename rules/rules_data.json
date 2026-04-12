@@ -57,10 +57,10 @@
   ],
 
   "sihua_rules": [
-    {"star":"太阴","hua":"忌","brightness_max":1,"text":"太阴陷地化忌=大凶，理财投资为最大软肋","severity":3,"src":"3.7"},
-    {"star":"太阳","hua":"忌","brightness_min":2,"text":"太阳庙旺化忌反为福论","severity":-1,"src":"3.7"},
-    {"star":"太阴","hua":"忌","brightness_min":2,"text":"太阴庙旺化忌反为福论","severity":-1,"src":"3.7"},
-    {"star":"太阳","hua":"忌","brightness_max":1,"text":"太阳陷地化忌=大凶","severity":3,"src":"3.7"},
+    {"star":"太阴","hua":"忌","brightness_max":3,"text":"太阴陷地化忌=大凶，理财投资为最大软肋","severity":3,"src":"3.7"},
+    {"star":"太阳","hua":"忌","brightness_min":5,"text":"太阳庙旺化忌反为福论","severity":-1,"src":"3.7"},
+    {"star":"太阴","hua":"忌","brightness_min":5,"text":"太阴庙旺化忌反为福论","severity":-1,"src":"3.7"},
+    {"star":"太阳","hua":"忌","brightness_max":3,"text":"太阳陷地化忌=大凶","severity":3,"src":"3.7"},
     {"star":"廉贞","hua":"忌","text":"廉贞化忌任何宫都主脓血之灾","severity":2,"src":"5章廉贞疾"},
     {"star":"天机","hua":"禄","text":"天机化禄财来财去活动性大","severity":0,"src":"3.2"},
     {"star":"天梁","hua":"权","text":"天梁化权化解危难力增，掌权开创","severity":-1,"src":"3.2"},
@@ -103,7 +103,7 @@
     {"stars":["天府","廉贞"],"palace":"疾厄","text":"天府廉贞=皮肤病（湿火）","severity":1,"src":"5章天府疾"},
     {"stars":["贪狼","陀罗"],"branch":["寅"],"text":"风流彩杖格（贪狼寅宫陀罗同度）","severity":1,"src":"5章贪狼"},
     {"stars":["贪狼","擎羊"],"branch":["亥","子"],"text":"泛水桃花（贪狼羊陀亥子宫迷酒丧身）","severity":2,"src":"5章贪狼"},
-    {"stars":["廉贞","火星"],"any_palace":true,"brightness_max":1,"text":"廉贞火星陷空=投河自缢（须廉贞陷地方论）","severity":3,"src":"5章廉贞"},
+    {"stars":["廉贞","火星"],"any_palace":true,"brightness_max":3,"text":"廉贞火星陷空=投河自缢（须廉贞陷地方论）","severity":3,"src":"5章廉贞"},
     {"stars":["文曲","破军"],"any_palace":true,"text":"破军文曲同度一生贫士更入水乡残疾","severity":2,"src":"5章破军"},
     {"stars":["禄存"],"palace":"命宫","alone_main":true,"text":"禄存独守命无吉化=看财奴","severity":1,"src":"5章禄存"},
     {"stars":["左辅"],"palace":"夫妻","text":"左辅或右弼在夫妻宫=定二婚","severity":1,"src":"5章左辅"},

@@ -403,10 +403,18 @@ button#calcBtn:hover { background: #b22222; }
 .r2-text p { margin:6px 0; text-indent:2em; line-height:1.9; }
 .r2-text .r2-sub { margin:8px 0 4px; font-weight:bold; color:#5a3800; border-bottom:1px dotted #d0c0a0; padding-bottom:2px; }
 
-/* 庙旺得陷标签 */
+/* 流年/小限年份标注 */
+.liunian-label { font-size: 0.62em; color: #666; margin-top: 2px; line-height: 1.5; }
+.ln-tag { display: inline-block; background: #e8f0ff; color: #2a5599; padding: 0 3px; border-radius: 2px; font-weight: bold; margin-right: 2px; }
+.xx-tag { display: inline-block; background: #f0ffe8; color: #3a7722; padding: 0 3px; border-radius: 2px; font-weight: bold; margin-right: 2px; }
+
+/* 庙旺7级标签：庙>旺>得>利>平>不>陷 */
 .mw-miao { font-size: 0.62em; color: #7a0000; background: #ffd700; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
 .mw-wang { font-size: 0.62em; color: #fff; background: #e07800; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
 .mw-de   { font-size: 0.62em; color: #555; background: #d4d4d4; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-li   { font-size: 0.62em; color: #555; background: #e8e8c8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-ping { font-size: 0.62em; color: #666; background: #c8d8e8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-bu   { font-size: 0.62em; color: #fff; background: #7888a8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
 .mw-xian { font-size: 0.62em; color: #fff; background: #4a6898; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
 
 /* 底部大限/流年快速导航 */
@@ -614,27 +622,36 @@ button#calcBtn:hover { background: #b22222; }
 const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 const STEMS    = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 
-// ---- 庙旺得陷查表（来源：《紫微斗数精成》第25步，钦天四化体系）----
+// ---- 庙旺失陷查表（来源：《紫微斗数精成》第27条 p24-25，7级）----
 // 地支顺序：子丑寅卯辰巳午未申酉戌亥（索引0-11）
-// 等级：3=庙 2=旺 1=得 0=陷
+// 书中编码：庙+3 旺+2 地+1 利0 平-1 不得地-2 陷-3
+// 代码编码：0=陷 1=不 2=平 3=利 4=得 5=旺 6=庙
 const MIAO_WANG = {
-  '紫微': [2,1,1,0,3,1,3,2,1,0,3,1],
-  '天机': [1,0,3,2,0,0,0,0,3,2,0,1],
-  '太阳': [0,0,2,3,1,1,3,2,1,0,0,0],
-  '武曲': [1,3,1,0,1,1,0,1,3,2,1,1],
-  '天同': [2,3,1,1,0,0,0,3,2,1,0,1],
-  '廉贞': [0,1,1,0,1,3,1,0,1,0,3,1],
-  '天府': [2,1,2,1,3,1,2,2,2,1,2,1],
-  '太阴': [3,2,1,0,0,0,0,0,0,2,3,2],
-  '贪狼': [2,0,3,2,0,0,0,0,3,2,0,0],
-  '巨门': [2,3,0,0,0,0,0,0,2,3,2,3],
-  '天相': [2,3,1,1,3,1,2,3,1,1,3,1],
-  '天梁': [1,3,2,1,2,1,3,2,1,1,2,1],
-  '七杀': [2,1,3,0,2,2,3,0,2,2,1,0],
-  '破军': [2,0,0,0,2,0,2,0,2,0,2,0],
+  //           子 丑 寅 卯 辰 巳 午 未 申 酉 戌 亥
+  '紫微': [2,6,6,5,4,1,6,6,5,5,4,5],
+  '天机': [6,0,4,5,3,2,0,0,4,5,3,4],
+  '太阳': [0,1,5,6,5,5,6,2,3,2,0,0],
+  '武曲': [5,6,4,3,6,2,5,6,5,3,6,4],
+  '天同': [5,5,3,6,2,0,0,5,5,4,2,6],
+  '廉贞': [2,3,6,2,3,6,2,3,6,2,3,6],
+  '天府': [6,6,6,4,5,4,5,6,6,5,5,4],
+  '太阴': [6,6,5,0,0,0,0,2,3,5,5,6],
+  '贪狼': [5,0,2,4,0,0,1,0,4,3,0,1],
+  '巨门': [5,5,6,6,2,2,5,2,6,6,6,4],
+  '天相': [6,6,6,6,4,4,4,5,6,6,4,4],
+  '天梁': [6,5,6,5,6,0,6,6,6,4,6,6],
+  '七杀': [5,6,4,5,4,4,5,5,4,5,6,3],
+  '破军': [6,5,6,6,5,2,6,3,6,6,5,5],
+  // 辅星亮度（同表第27条后6列）
+  '火星': [6,4,0,3,6,6,6,6,4,4,6,0],
+  '铃星': [6,4,0,3,6,6,6,6,4,4,6,0],
+  '擎羊': [1,6,0,6,6,0,6,0,6,6,6,0],
+  '陀罗': [5,6,6,6,6,0,6,6,6,0,6,5],
+  '文昌': [4,6,6,5,4,6,6,6,2,6,6,2],
+  '文曲': [4,6,4,5,4,6,6,5,4,6,6,5],
 };
-const MW_LABELS = ['陷','得','旺','庙'];
-const MW_CSS    = ['mw-xian','mw-de','mw-wang','mw-miao'];
+const MW_LABELS = ['陷','不','平','利','得','旺','庙'];
+const MW_CSS    = ['mw-xian','mw-bu','mw-ping','mw-li','mw-de','mw-wang','mw-miao'];
 
 // 地支索引：子=0,丑=1,...亥=11
 function branchIdx(name) { return BRANCHES.indexOf(name); }
@@ -951,6 +968,31 @@ function getMingRelStars(mingGongBrIdx, shenGongBrIdx, yearBrIdx) {
   const tiancai  = (mingGongBrIdx + yearBrIdx) % 12;
   const tianshou = (shenGongBrIdx + yearBrIdx) % 12;
   return { '天才':tiancai, '天寿':tianshou };
+}
+
+// ---- 将前十二星（来源：《紫微斗数精成》第28条 p25）----
+// 以出生年支三合组确定将星位置，然后顺布12星
+// 寅午戌→将星午(6), 申子辰→将星子(0), 巳酉丑→将星酉(9), 亥卯未→将星卯(3)
+const JIANGQIAN_NAMES = ['将星','攀鞍','岁驿','息神','华盖','劫煞','灾煞','天煞','指背','咸池','月煞','亡神'];
+function getJiangQianStars(yearBrIdx) {
+  const startMap = [0,9,6,3,0,9,6,3,0,9,6,3]; // 子→子, 丑→酉, 寅→午, 卯→卯, ...
+  const start = startMap[yearBrIdx];
+  const result = {};
+  for (let i = 0; i < 12; i++) {
+    result[JIANGQIAN_NAMES[i]] = (start + i) % 12;
+  }
+  return result;
+}
+
+// ---- 岁前十二星（来源：《紫微斗数精成》第29条 p25-26）----
+// 以生年支为条件，岁建=年支，然后顺布12星
+const SUIQIAN_NAMES = ['岁建','晦气','丧门','贯索','官符','小耗','大耗','龙德','白虎','天德','吊客','病符'];
+function getSuiQianStars(yearBrIdx) {
+  const result = {};
+  for (let i = 0; i < 12; i++) {
+    result[SUIQIAN_NAMES[i]] = (yearBrIdx + i) % 12;
+  }
+  return result;
 }
 
 // ---- 大限（来源：rules_book1.md §15）----
@@ -1559,6 +1601,19 @@ function calculate() {
   for (const [name, pos] of Object.entries(changshengStars)) {
     stars[pos].aux.push(name);
   }
+  // 将前十二星（来源：《紫微斗数精成》第28条）
+  const jiangQianStars = getJiangQianStars(yearBrIdx);
+  for (const [name, pos] of Object.entries(jiangQianStars)) {
+    // 避免与已有同名星重复（华盖、劫煞、咸池已在年支系中安过）
+    const existed = stars[pos].aux.includes(name);
+    if (!existed) stars[pos].aux.push(name);
+  }
+  // 岁前十二星（来源：《紫微斗数精成》第29条）
+  const suiQianStars = getSuiQianStars(yearBrIdx);
+  for (const [name, pos] of Object.entries(suiQianStars)) {
+    const existed = stars[pos].aux.includes(name);
+    if (!existed) stars[pos].aux.push(name);
+  }
   // 旬空（修正版，替换旧截空）
   stars[xunKong[0]].aux.push('旬空');
   if (xunKong[1] !== xunKong[0]) stars[xunKong[1]].aux.push('旬空');
@@ -1766,16 +1821,19 @@ function renderChart(data) {
     mainDiv.innerHTML = mainHTML;
     div.appendChild(mainDiv);
 
-    // 辅星
+    // 辅星（带庙旺标注）
     const auxDiv = document.createElement('div');
     auxDiv.className = 'stars-aux';
     let auxHTML = '';
     for (const sName of starsInPalace.aux) {
       const huaType = starsInPalace.hua[sName];
+      const mwArrAux = MIAO_WANG[sName];
+      const mwLevelAux = mwArrAux !== undefined ? mwArrAux[brIdx] : -1;
+      const mwBadgeAux = mwLevelAux >= 0 ? `<span class="${MW_CSS[mwLevelAux]}">${MW_LABELS[mwLevelAux]}</span>` : '';
       if (huaType) {
-        auxHTML += `<span class="${HUA_CSS[huaType]}">${sName}${HUA_SYM[huaType]}</span> `;
+        auxHTML += `<span class="${HUA_CSS[huaType]}">${sName}${HUA_SYM[huaType]}</span>${mwBadgeAux} `;
       } else {
-        auxHTML += `${sName} `;
+        auxHTML += `${sName}${mwBadgeAux} `;
       }
     }
     auxDiv.innerHTML = auxHTML;
@@ -1788,6 +1846,35 @@ function renderChart(data) {
       dxDiv.className = 'daxian-label';
       dxDiv.textContent = `▶ ${dx.ageStart}–${dx.ageEnd}岁`;
       div.appendChild(dxDiv);
+    }
+
+    // 流年/小限年份标注
+    const nowYear = new Date().getFullYear();
+    // 流年：该宫地支对应的年份（12年一循环，列出虚岁1~120范围内的）
+    const liuNianYears = [];
+    for (let age = 1; age <= 120; age++) {
+      const yr = lunarYear + age - 1;
+      if (calcLiuNian(yr) === brIdx) liuNianYears.push(age);
+    }
+    // 小限：该宫对应的虚岁
+    const xiaoXianAges = [];
+    for (let age = 1; age <= 120; age++) {
+      if (calcXiaoXian(yearBrIdx, gender, age) === brIdx) xiaoXianAges.push(age);
+    }
+    if (liuNianYears.length > 0 || xiaoXianAges.length > 0) {
+      const lnDiv = document.createElement('div');
+      lnDiv.className = 'liunian-label';
+      let html = '';
+      if (liuNianYears.length > 0) {
+        const display = liuNianYears.slice(0, 6).join(',');
+        html += `<span class="ln-tag">流年</span> ${display}`;
+      }
+      if (xiaoXianAges.length > 0) {
+        const display = xiaoXianAges.slice(0, 6).join(',');
+        html += `${liuNianYears.length > 0 ? '<br>' : ''}<span class="xx-tag">小限</span> ${display}`;
+      }
+      lnDiv.innerHTML = html;
+      div.appendChild(lnDiv);
     }
 
     return div;
@@ -1979,15 +2066,15 @@ function checkClauseCondition(clause, ctx) {
   // ---- 庙旺/失陷/得地/旺地/闲弱 条件 ----
   if (ctx.currentStar && ctx.branchIdx !== undefined) {
     const mwArr = MIAO_WANG[ctx.currentStar];
-    const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 3庙2旺1得0陷
+    const mwLevel = mwArr ? mwArr[ctx.branchIdx] : -1; // 0陷1不2平3利4得5旺6庙
     if (mwLevel >= 0) {
       const t = clause.trim();
-      if (/^(?:失陷|陷地)[，,则在或时加无更不亦可与且仅较]/.test(t) && mwLevel > 0) return false;
-      if (/^庙旺[，,则有可主在或时加无更不亦与且较]/.test(t) && mwLevel < 2) return false;
-      if (/^得地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 1) return false;
-      if (/^旺地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel < 2) return false;
-      if (/^闲弱/.test(t) && mwLevel > 1) return false;
-      if (/^入庙[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 3) return false;
+      if (/^(?:失陷|陷地)[，,则在或时加无更不亦可与且仅较]/.test(t) && mwLevel > 2) return false; // 陷/不/平=0-2
+      if (/^庙旺[，,则有可主在或时加无更不亦与且较]/.test(t) && mwLevel < 5) return false; // 旺/庙=5-6
+      if (/^得地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 4) return false; // 得=4
+      if (/^旺地[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel < 5) return false; // 旺/庙=5-6
+      if (/^闲弱/.test(t) && mwLevel > 3) return false; // 利及以下=0-3
+      if (/^入庙[，,则在或时加无更不亦可与且较]/.test(t) && mwLevel !== 6) return false; // 庙=6
     }
   }
   // "若XX失陷" / "若XX庙旺" / "所会的XX失陷" → 检查具体星的庙旺
@@ -2000,8 +2087,8 @@ function checkClauseCondition(clause, ctx) {
           if (ctx._stars && ctx._stars[i].main.includes(m[1])) {
             const mwArr = MIAO_WANG[m[1]];
             const lvl = mwArr ? mwArr[i] : -1;
-            if (wantFailed && lvl > 0) return false;
-            if (!wantFailed && lvl < 2) return false;
+            if (wantFailed && lvl > 2) return false;  // 失陷=0-2
+            if (!wantFailed && lvl < 5) return false; // 庙旺=5-6
             break;
           }
         }
@@ -2455,8 +2542,8 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
         const mwArr = MIAO_WANG[currentStar];
         const mwLevel = mwArr ? mwArr[branchIdx] : -1;
         if (mwLevel >= 0) {
-          if (para.context.level === 'xian' && mwLevel > 0) continue; // 失陷段落，星非陷→跳过
-          if (para.context.level === 'miao' && mwLevel < 2) continue; // 庙旺段落，星非庙旺→跳过
+          if (para.context.level === 'xian' && mwLevel > 2) continue; // 失陷段落（陷/不/平），星>平→跳过
+          if (para.context.level === 'miao' && mwLevel < 5) continue; // 庙旺段落，星<旺→跳过
         }
       }
     }

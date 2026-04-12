@@ -362,10 +362,13 @@ button#calcBtn:hover { background: #b22222; }
 .r2-text p { margin:6px 0; text-indent:2em; line-height:1.9; }
 .r2-text .r2-sub { margin:8px 0 4px; font-weight:bold; color:#5a3800; border-bottom:1px dotted #d0c0a0; padding-bottom:2px; }
 
-/* 庙旺得陷标签 */
+/* 庙旺7级标签：庙>旺>得>利>平>不>陷 */
 .mw-miao { font-size: 0.62em; color: #7a0000; background: #ffd700; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
 .mw-wang { font-size: 0.62em; color: #fff; background: #e07800; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; font-weight: bold; }
 .mw-de   { font-size: 0.62em; color: #555; background: #d4d4d4; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-li   { font-size: 0.62em; color: #555; background: #e8e8c8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-ping { font-size: 0.62em; color: #666; background: #c8d8e8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
+.mw-bu   { font-size: 0.62em; color: #fff; background: #7888a8; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
 .mw-xian { font-size: 0.62em; color: #fff; background: #4a6898; border-radius: 2px; padding: 0 2px; margin-left: 1px; vertical-align: super; }
 
 /* 底部大限/流年快速导航 */
@@ -473,27 +476,34 @@ button#calcBtn:hover { background: #b22222; }
 const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 const STEMS    = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 
-// ---- 庙旺得陷查表（来源：《紫微斗数精成》第25步，钦天四化体系）----
+// ---- 庙旺失陷查表（来源：《紫微斗数精成》第27条 p24-25，7级）----
 // 地支顺序：子丑寅卯辰巳午未申酉戌亥（索引0-11）
-// 等级：3=庙 2=旺 1=得 0=陷
+// 代码编码：0=陷 1=不 2=平 3=利 4=得 5=旺 6=庙
 const MIAO_WANG = {
-  '紫微': [2,1,1,0,3,1,3,2,1,0,3,1],
-  '天机': [1,0,3,2,0,0,0,0,3,2,0,1],
-  '太阳': [0,0,2,3,1,1,3,2,1,0,0,0],
-  '武曲': [1,3,1,0,1,1,0,1,3,2,1,1],
-  '天同': [2,3,1,1,0,0,0,3,2,1,0,1],
-  '廉贞': [0,1,1,0,1,3,1,0,1,0,3,1],
-  '天府': [2,1,2,1,3,1,2,2,2,1,2,1],
-  '太阴': [3,2,1,0,0,0,0,0,0,2,3,2],
-  '贪狼': [2,0,3,2,0,0,0,0,3,2,0,0],
-  '巨门': [2,3,0,0,0,0,0,0,2,3,2,3],
-  '天相': [2,3,1,1,3,1,2,3,1,1,3,1],
-  '天梁': [1,3,2,1,2,1,3,2,1,1,2,1],
-  '七杀': [2,1,3,0,2,2,3,0,2,2,1,0],
-  '破军': [2,0,0,0,2,0,2,0,2,0,2,0],
+  //           子 丑 寅 卯 辰 巳 午 未 申 酉 戌 亥
+  '紫微': [2,6,6,5,4,1,6,6,5,5,4,5],
+  '天机': [6,0,4,5,3,2,0,0,4,5,3,4],
+  '太阳': [0,1,5,6,5,5,6,2,3,2,0,0],
+  '武曲': [5,6,4,3,6,2,5,6,5,3,6,4],
+  '天同': [5,5,3,6,2,0,0,5,5,4,2,6],
+  '廉贞': [2,3,6,2,3,6,2,3,6,2,3,6],
+  '天府': [6,6,6,4,5,4,5,6,6,5,5,4],
+  '太阴': [6,6,5,0,0,0,0,2,3,5,5,6],
+  '贪狼': [5,0,2,4,0,0,1,0,4,3,0,1],
+  '巨门': [5,5,6,6,2,2,5,2,6,6,6,4],
+  '天相': [6,6,6,6,4,4,4,5,6,6,4,4],
+  '天梁': [6,5,6,5,6,0,6,6,6,4,6,6],
+  '七杀': [5,6,4,5,4,4,5,5,4,5,6,3],
+  '破军': [6,5,6,6,5,2,6,3,6,6,5,5],
+  '火星': [6,4,0,3,6,6,6,6,4,4,6,0],
+  '铃星': [6,4,0,3,6,6,6,6,4,4,6,0],
+  '擎羊': [1,6,0,6,6,0,6,0,6,6,6,0],
+  '陀罗': [5,6,6,6,6,0,6,6,6,0,6,5],
+  '文昌': [4,6,6,5,4,6,6,6,2,6,6,2],
+  '文曲': [4,6,4,5,4,6,6,5,4,6,6,5],
 };
-const MW_LABELS = ['陷','得','旺','庙'];
-const MW_CSS    = ['mw-xian','mw-de','mw-wang','mw-miao'];
+const MW_LABELS = ['陷','不','平','利','得','旺','庙'];
+const MW_CSS    = ['mw-xian','mw-bu','mw-ping','mw-li','mw-de','mw-wang','mw-miao'];
 
 // 地支索引：子=0,丑=1,...亥=11
 function branchIdx(name) { return BRANCHES.indexOf(name); }
