@@ -1,0 +1,218 @@
+{
+  "solar": "1990-08-15",
+  "lunar": "1990年6月25日",
+  "yearStem": "庚",
+  "yearBranch": "午",
+  "hour": 6,
+  "hourBranch": "午",
+  "gender": "男",
+  "direction": "顺行",
+  "mingIdx": 1,
+  "shenIdx": 1,
+  "mingBranch": "丑",
+  "shenBranch": "丑",
+  "wuxingJu": 2,
+  "zwPos": 2,
+  "palaces": [
+    {
+      "name": "命宫",
+      "branchIdx": 1,
+      "branch": "丑",
+      "stars": [
+        "天机",
+        "巨门",
+        "天魁"
+      ],
+      "sihua": [],
+      "stemIdx": 5,
+      "stem": "己",
+      "changsheng": "衰",
+      "daxianStart": 2,
+      "daxianEnd": 11
+    },
+    {
+      "name": "兄弟",
+      "branchIdx": 0,
+      "branch": "子",
+      "stars": [
+        "太阳",
+        "贪狼"
+      ],
+      "sihua": [
+        "化禄"
+      ],
+      "stemIdx": 4,
+      "stem": "戊",
+      "changsheng": "帝旺",
+      "daxianStart": 12,
+      "daxianEnd": 21
+    },
+    {
+      "name": "夫妻",
+      "branchIdx": 11,
+      "branch": "亥",
+      "stars": [
+        "武曲",
+        "太阴"
+      ],
+      "sihua": [
+        "化权",
+        "化科"
+      ],
+      "stemIdx": 5,
+      "stem": "己",
+      "changsheng": "临官",
+      "daxianStart": 22,
+      "daxianEnd": 31
+    },
+    {
+      "name": "子女",
+      "branchIdx": 10,
+      "branch": "戌",
+      "stars": [
+        "天同",
+        "天府",
+        "文曲"
+      ],
+      "sihua": [
+        "化忌"
+      ],
+      "stemIdx": 4,
+      "stem": "戊",
+      "changsheng": "冠带",
+      "daxianStart": 32,
+      "daxianEnd": 41
+    },
+    {
+      "name": "财帛",
+      "branchIdx": 9,
+      "branch": "酉",
+      "stars": [
+        "左辅",
+        "擎羊"
+      ],
+      "sihua": [],
+      "stemIdx": 3,
+      "stem": "丁",
+      "changsheng": "沐浴",
+      "daxianStart": 42,
+      "daxianEnd": 51
+    },
+    {
+      "name": "疾厄",
+      "branchIdx": 8,
+      "branch": "申",
+      "stars": [
+        "廉贞",
+        "破军",
+        "禄存",
+        "火星",
+        "天马"
+      ],
+      "sihua": [],
+      "stemIdx": 2,
+      "stem": "丙",
+      "changsheng": "长生",
+      "daxianStart": 52,
+      "daxianEnd": 61
+    },
+    {
+      "name": "迁移",
+      "branchIdx": 7,
+      "branch": "未",
+      "stars": [
+        "陀罗",
+        "天钺"
+      ],
+      "sihua": [],
+      "stemIdx": 1,
+      "stem": "乙",
+      "changsheng": "养",
+      "daxianStart": 62,
+      "daxianEnd": 71
+    },
+    {
+      "name": "奴仆",
+      "branchIdx": 6,
+      "branch": "午",
+      "stars": [],
+      "sihua": [],
+      "stemIdx": 0,
+      "stem": "甲",
+      "changsheng": "胎",
+      "daxianStart": 72,
+      "daxianEnd": 81
+    },
+    {
+      "name": "官禄",
+      "branchIdx": 5,
+      "branch": "巳",
+      "stars": [
+        "右弼"
+      ],
+      "sihua": [],
+      "stemIdx": 9,
+      "stem": "癸",
+      "changsheng": "绝",
+      "daxianStart": 82,
+      "daxianEnd": 91
+    },
+    {
+      "name": "田宅",
+      "branchIdx": 4,
+      "branch": "辰",
+      "stars": [
+        "七杀",
+        "文昌",
+        "铃星"
+      ],
+      "sihua": [],
+      "stemIdx": 8,
+      "stem": "壬",
+      "changsheng": "墓",
+      "daxianStart": 92,
+      "daxianEnd": 101
+    },
+    {
+      "name": "福德",
+      "branchIdx": 3,
+      "branch": "卯",
+      "stars": [
+        "天梁"
+      ],
+      "sihua": [],
+      "stemIdx": 7,
+      "stem": "辛",
+      "changsheng": "死",
+      "daxianStart": 102,
+      "daxianEnd": 111
+    },
+    {
+      "name": "父母",
+      "branchIdx": 2,
+      "branch": "寅",
+      "stars": [
+        "紫微",
+        "天相"
+      ],
+      "sihua": [],
+      "stemIdx": 6,
+      "stem": "庚",
+      "changsheng": "病",
+      "daxianStart": 112,
+      "daxianEnd": 121
+    }
+  ],
+  "sihua": {
+    "太阳": "化禄",
+    "武曲": "化权",
+    "太阴": "化科",
+    "天同": "化忌"
+  },
+  "sihuaStars": [
+    "太阳",
+    "武曲",
+    "太阴",
+    "天同"
+  ]
+}

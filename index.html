@@ -403,6 +403,17 @@ button#calcBtn:hover { background: #b22222; }
 .r2-text p { margin:6px 0; text-indent:2em; line-height:1.9; }
 .r2-text .r2-sub { margin:8px 0 4px; font-weight:bold; color:#5a3800; border-bottom:1px dotted #d0c0a0; padding-bottom:2px; }
 
+/* 宫干四化小字 */
+.gonggan-sihua { font-size: 0.55em; color: #999; line-height: 1.2; margin-bottom: 1px; }
+.gs-lu { color: #1a7a1a; margin-right: 2px; }
+.gs-quan { color: #b8860b; margin-right: 2px; }
+.gs-ke { color: #2266aa; margin-right: 2px; }
+.gs-ji { color: #a02020; }
+
+/* 三方四正高亮 */
+.palace.sf-highlight { box-shadow: inset 0 0 0 3px #e07800; background: #fff8ee !important; }
+.palace.sf-self { box-shadow: inset 0 0 0 3px #c00; background: #fff0f0 !important; }
+
 /* 流年/小限年份标注 */
 .liunian-label { font-size: 0.62em; color: #666; margin-top: 2px; line-height: 1.5; }
 .ln-tag { display: inline-block; background: #e8f0ff; color: #2a5599; padding: 0 3px; border-radius: 2px; font-weight: bold; margin-right: 2px; }
@@ -1634,6 +1645,19 @@ function calculate() {
     }
   }
 
+  // ---- 四柱八字 + 纳音五行 ----
+  let baZi = null;
+  try {
+    const HOUR_MAP = [0,2,4,6,8,10,12,14,16,18,20,22,23]; // hourBrIdx→近似小时
+    const hh = isLateZi ? 23 : (hourBrIdx * 2);
+    const solBz = Solar.fromYmdHms(y, m, d, hh, 0, 0);
+    const ec = solBz.getLunar().getEightChar();
+    baZi = {
+      year: ec.getYear(), month: ec.getMonth(), day: ec.getDay(), time: ec.getTime(),
+      yearNaYin: ec.getYearNaYin()
+    };
+  } catch(e) { /* 八字计算失败不阻碍排盘 */ }
+
   // ---- 渲染命盘 ----
   renderChart({
     y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
@@ -1641,7 +1665,8 @@ function calculate() {
     mingGongBrIdx,shenGongBrIdx,
     palaceMap,palaceStemMap,
     stars,sihua,mingzhu,shenzhu,gender,
-    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi,
+    baZi
   });
 }
 
@@ -1712,7 +1737,8 @@ function renderChart(data) {
     mingGongBrIdx,shenGongBrIdx,
     palaceMap,palaceStemMap,
     stars,sihua,mingzhu,shenzhu,gender,
-    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi
+    daXianData, yearBrIdx, yearStemIdx, hourBrIdx, isLateZi,
+    baZi
   } = data;
 
   // 初始化全局状态
@@ -1781,12 +1807,26 @@ function renderChart(data) {
     const div = document.createElement('div');
     div.className = 'palace';
     div.id = `palace-${brIdx}`;
-    // 大限点击
+    // 大限点击（左键）
     const dxN = brToDaXian[brIdx];
     if (dxN !== undefined) {
       div.style.cursor = 'pointer';
       div.addEventListener('click', () => selectDaXian(dxN));
     }
+    // 三方四正高亮（右键）
+    div.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      // 清除所有高亮
+      document.querySelectorAll('.palace.sf-highlight,.palace.sf-self').forEach(el => {
+        el.classList.remove('sf-highlight','sf-self');
+      });
+      // 三方四正：本宫、对宫(+6)、三合(+4、+8)
+      const sfBrs = [brIdx, (brIdx+6)%12, (brIdx+4)%12, (brIdx+8)%12];
+      sfBrs.forEach((b,i) => {
+        const el = document.getElementById(`palace-${b}`);
+        if (el) el.classList.add(i === 0 ? 'sf-self' : 'sf-highlight');
+      });
+    });
     const brName   = BRANCHES[brIdx];
     const stemName = palaceStemMap[brIdx];
     const palName  = palaceMap[brIdx] || '';
@@ -1801,6 +1841,15 @@ function renderChart(data) {
       `<span class="palace-stem">${stemName}</span>` +
       `<span class="palace-branch">${brName}</span>`;
     div.appendChild(header);
+
+    // 宫干四化（小字标注）
+    const gsh = SIHUA[stemName];
+    if (gsh) {
+      const gshDiv = document.createElement('div');
+      gshDiv.className = 'gonggan-sihua';
+      gshDiv.innerHTML = `<span class="gs-lu">${gsh.禄[0]}禄</span><span class="gs-quan">${gsh.权[0]}权</span><span class="gs-ke">${gsh.科[0]}科</span><span class="gs-ji">${gsh.忌[0]}忌</span>`;
+      div.appendChild(gshDiv);
+    }
 
     // 主星
     const mainDiv = document.createElement('div');
@@ -1894,11 +1943,22 @@ function renderChart(data) {
   center.style.gridRow = '2 / 4';
   center.style.gridColumn = '2 / 4';
   const JU_NAMES2 = {2:'水二局',3:'木三局',4:'金四局',5:'土五局',6:'火六局'};
+  // 四柱八字区
+  const bzHTML = baZi ? `
+    <div class="ci-row" style="font-size:0.82em;margin-top:2px;">
+      <span style="color:#888">四柱：</span>
+      <span class="ci-val">${baZi.year[0]}</span><span class="ci-val" style="color:#2a6">${baZi.month[0]}</span><span class="ci-val" style="color:#c50">${baZi.day[0]}</span><span class="ci-val" style="color:#06a">${baZi.time[0]}</span><br>
+      <span style="color:#888;margin-left:2.5em">　</span>
+      <span class="ci-val">${baZi.year[1]}</span><span class="ci-val" style="color:#2a6">${baZi.month[1]}</span><span class="ci-val" style="color:#c50">${baZi.day[1]}</span><span class="ci-val" style="color:#06a">${baZi.time[1]}</span>
+    </div>` : '';
+  const nayinHTML = baZi ? `<div class="ci-row" style="font-size:0.75em;color:#888">纳音：${baZi.yearNaYin}</div>` : '';
+
   center.innerHTML = `<div class="center-info">
     <div class="ci-row">命主：<span class="ci-val">${mingzhu}</span></div>
     <div class="ci-row">身主：<span class="ci-val">${shenzhu}</span></div>
     <div class="ci-row">五行局：<span class="ci-val">${JU_NAMES2[ju]}</span></div>
     <div class="ci-row">年干：<span class="ci-val">${yearStem}${yearBr}</span></div>
+    ${nayinHTML}${bzHTML}
     <hr style="border-color:#ddc880;margin:6px 0">
     <div class="ci-row" style="font-size:0.78em;color:#5a3800">
       化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
