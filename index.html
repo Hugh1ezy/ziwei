@@ -922,6 +922,9 @@ const KUIYUE = {
 // 天官、天福
 const TIANGUAN_MAP = {'甲':7,'乙':4,'丙':5,'丁':2,'戊':3,'己':9,'庚':11,'辛':9,'壬':10,'癸':6};
 const TIANFU_STAR_MAP = {'甲':9,'乙':8,'丙':0,'丁':11,'戊':3,'己':2,'庚':6,'辛':5,'壬':6,'癸':5};
+// 天厨（来源：用户提供安天厨星规则，年干系星）
+// 甲→巳(5) 乙→午(6) 丙→子(0) 丁→巳(5) 戊→午(6) 己→申(8) 庚→寅(2) 辛→午(6) 壬→酉(9) 癸→亥(11)
+const TIANCHU_MAP = {'甲':5,'乙':6,'丙':0,'丁':5,'戊':6,'己':8,'庚':2,'辛':6,'壬':9,'癸':11};
 // 截空
 const JIEKONG_MAP = {
   '甲':[8,9],'乙':[7,6],'丙':[4,5],'丁':[3,2],
@@ -936,11 +939,12 @@ function getYearStemStars(yearStemName) {
   const ky = KUIYUE[yearStemName];
   const tianguan = TIANGUAN_MAP[yearStemName];
   const tianfuStar = TIANFU_STAR_MAP[yearStemName];
+  const tianchu = TIANCHU_MAP[yearStemName];
   const jk = JIEKONG_MAP[yearStemName];
   return {
     '禄存':lusun, '擎羊':qingyang, '陀罗':tuoluo,
     '天魁':ky.魁, '天钺':ky.钺,
-    '天官':tianguan, '天福':tianfuStar,
+    '天官':tianguan, '天福':tianfuStar, '天厨':tianchu,
     '截空甲':jk[0], '截空乙':jk[1]
   };
 }
