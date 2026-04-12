@@ -247,6 +247,50 @@ function interpretPalace(ctx, palaceName, R) {
     items.push({ type: 'star_base', text: desc, severity: 0, src: `5章${st}` });
   }
 
+  // 2a. P0 庙旺失陷解读（来源：书第27条7级制 + 通则）
+  for (const st of (sData.main || [])) {
+    const bright = getStarBrightness(ctx, st, brIdx);
+    if (bright < 0) continue;
+    const MW_LABELS = ['陷','不得地','平','利','得地','旺','庙'];
+    const label = MW_LABELS[bright] || '?';
+    const branch = getBranch(brIdx);
+    let commentary = '';
+    if (bright >= 5) {
+      // 庙(6) 或 旺(5)
+      commentary = `${st}在${branch}宫为【${label}】，星力最强，吉性充分发挥。主星庙旺则本宫事务顺遂，正面特质明显，遇吉星加会更佳，遇煞星亦能化解部分凶性。`;
+    } else if (bright >= 3) {
+      // 得(4) 或 利(3)
+      commentary = `${st}在${branch}宫为【${label}】，星力尚可，正面特质可以发挥但力度稍减。若三方四正有吉星扶助则趋吉，遇煞星冲破则力不从心。`;
+    } else if (bright === 2) {
+      // 平(-1)
+      commentary = `${st}在${branch}宫为【${label}】，星力平平，吉凶特质均不明显。需视三方四正会合之星而定吉凶，逢吉则平顺，逢煞则不利。`;
+    } else {
+      // 不得地(1) 或 陷(0)
+      commentary = `${st}在${branch}宫为【${label}】，星力甚弱，正面特质难以发挥，负面特质容易显现。遇煞星同宫或冲照，凶性加重；即使遇吉星亦难完全化解。`;
+    }
+    items.push({ type: 'brightness', text: commentary, severity: bright <= 1 ? 1 : 0, src: '§27庙旺' });
+  }
+
+  // 2a-aux. 六煞星庙旺解读
+  const SHA_STARS = ['擎羊','陀罗','火星','铃星'];
+  for (const st of (sData.aux || [])) {
+    if (!SHA_STARS.includes(st)) continue;
+    const bright = getStarBrightness(ctx, st, brIdx);
+    if (bright < 0) continue;
+    const MW_LABELS = ['陷','不得地','平','利','得地','旺','庙'];
+    const label = MW_LABELS[bright] || '?';
+    const branch = getBranch(brIdx);
+    let commentary = '';
+    if (bright >= 5) {
+      commentary = `${st}在${branch}宫为【${label}】，煞星庙旺反有正用——可激发斗志与冲劲，若与吉星同宫则化煞为权，主有开创之力。`;
+    } else if (bright <= 1) {
+      commentary = `${st}在${branch}宫为【${label}】，煞星落陷凶性最重，破坏力强，对本宫事务形成严重冲击。若再逢忌星或其他煞星同宫，凶上加凶。`;
+    }
+    if (commentary) {
+      items.push({ type: 'brightness', text: commentary, severity: bright <= 1 ? 2 : 0, src: '§27庙旺' });
+    }
+  }
+
   // 2b. Double-star lookup (双星组合速查)
   if (R.double_star && (sData.main || []).length >= 2) {
     const STAR_ABBR = {'紫微':'紫','天机':'机','太阳':'阳','武曲':'武','天同':'同','廉贞':'廉',
