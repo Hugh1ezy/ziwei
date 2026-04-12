@@ -247,31 +247,91 @@ function interpretPalace(ctx, palaceName, R) {
     items.push({ type: 'star_base', text: desc, severity: 0, src: `5章${st}` });
   }
 
-  // 2a. P0 庙旺失陷解读（来源：书第27条7级制 + 通则）
+  // 2a. P0 庙旺失陷解读（来源：书第27条7级制 + rules_jiedu.md星性分类）
+  // 星性分类（来源：rules_jiedu.md）：
+  //   四恶曜：杀破廉贪 →「失陷遇煞大凶，入庙反具横发力」
+  //   暗星：巨门（化气曰暗，口舌是非）
+  //   寡宿星：武曲（化气曰财，但刚克孤寡）
+  //   火性星：太阳、廉贞、七杀 →「陷地化忌凶力倍增」
+  //   纯吉型：天府、天相、天同、天梁等
+  const SI_E_YAO = ['七杀','破军','廉贞','贪狼']; // 四恶曜
+  const HUO_XING = ['太阳','廉贞','七杀'];          // 火性星（陷地化忌凶力倍增）
+  const AN_XING  = ['巨门'];                         // 暗星
+  const GU_XING  = ['武曲'];                         // 寡宿刚克星
   for (const st of (sData.main || [])) {
     const bright = getStarBrightness(ctx, st, brIdx);
     if (bright < 0) continue;
     const MW_LABELS = ['陷','不得地','平','利','得地','旺','庙'];
     const label = MW_LABELS[bright] || '?';
     const branch = getBranch(brIdx);
+    const isSiE = SI_E_YAO.includes(st);
+    const isHuo = HUO_XING.includes(st);
+    const isAn  = AN_XING.includes(st);
+    const isGu  = GU_XING.includes(st);
+    const hasJi = ctx.natalHua[st] === '忌';
     let commentary = '';
-    if (bright >= 5) {
-      // 庙(6) 或 旺(5)
-      commentary = `${st}在${branch}宫为【${label}】，星力最强，吉性充分发挥。主星庙旺则本宫事务顺遂，正面特质明显，遇吉星加会更佳，遇煞星亦能化解部分凶性。`;
-    } else if (bright >= 3) {
-      // 得(4) 或 利(3)
-      commentary = `${st}在${branch}宫为【${label}】，星力尚可，正面特质可以发挥但力度稍减。若三方四正有吉星扶助则趋吉，遇煞星冲破则力不从心。`;
-    } else if (bright === 2) {
-      // 平(-1)
-      commentary = `${st}在${branch}宫为【${label}】，星力平平，吉凶特质均不明显。需视三方四正会合之星而定吉凶，逢吉则平顺，逢煞则不利。`;
+
+    if (isSiE) {
+      // 四恶曜：杀破廉贪
+      if (bright >= 5) {
+        commentary = `${st}在${branch}宫为【${label}】，四恶曜入庙反具横发力，开创进取之力极强。庙旺时杀气化为魄力，主大胆果断、敢冲敢拼，遇吉星更主横发。`;
+      } else if (bright >= 3) {
+        commentary = `${st}在${branch}宫为【${label}】，四恶曜星力中等，开创力有余但稳定性不足。需吉星扶助方能成就，逢煞则冲劲变冲动。`;
+      } else if (bright === 2) {
+        commentary = `${st}在${branch}宫为【${label}】，四恶曜平地则善恶参半，吉凶不定。三方四正有吉则尚可驾驭，见煞则易走偏锋。`;
+      } else {
+        commentary = `${st}在${branch}宫为【${label}】，四恶曜失陷遇煞大凶——杀气不受控制，破坏力极强，主灾祸刑伤。${isHuo && hasJi ? '此为火性星陷地化忌，凶力倍增。' : ''}遇煞星同宫或冲照，凶上加凶，即使有吉星亦难化解。`;
+      }
+    } else if (isAn) {
+      // 巨门（暗星）
+      if (bright >= 5) {
+        commentary = `${st}在${branch}宫为【${label}】，暗星入庙则口才化为雄辩之力，善于分析表达，可成专业权威。是非之气转化为明辨是非的能力。`;
+      } else if (bright >= 3) {
+        commentary = `${st}在${branch}宫为【${label}】，暗星星力中等，口舌之能可用但易招是非。需吉星化解方能趋吉，化禄化权则更佳。`;
+      } else if (bright === 2) {
+        commentary = `${st}在${branch}宫为【${label}】，暗星平地则是非口舌较多，人际关系需费心经营。三方四正见吉可减少是非。`;
+      } else {
+        commentary = `${st}在${branch}宫为【${label}】，暗星失陷则是非缠身、口舌招灾，人际关系差，六亲缘薄多猜忌。遇煞星更主暗损、小人陷害。`;
+      }
+    } else if (isGu) {
+      // 武曲（寡宿刚克）
+      if (bright >= 5) {
+        commentary = `${st}在${branch}宫为【${label}】，财星入庙主正财丰厚，理财有方，刚毅果决。庙旺虽仍带孤克之气，但财运亨通可补。`;
+      } else if (bright >= 3) {
+        commentary = `${st}在${branch}宫为【${label}】，财星星力中等，求财需劳心劳力，刚克之性尚可控制。宜见吉星柔化。`;
+      } else if (bright === 2) {
+        commentary = `${st}在${branch}宫为【${label}】，财星平地则进财平平，孤克之性渐显，人际偏刚硬。需注意与人合作的态度。`;
+      } else {
+        commentary = `${st}在${branch}宫为【${label}】，财星失陷则财运受阻、破耗不断，刚克孤寡之性最重。遇煞星主破败损财，入六亲宫则刑克亲人。`;
+      }
+    } else if (isHuo && !isSiE) {
+      // 太阳（火性星但非四恶曜）
+      if (bright >= 5) {
+        commentary = `${st}在${branch}宫为【${label}】，星力最强，光芒普照，吉性充分发挥。主贵人运旺、事业光明，男命尤佳。`;
+      } else if (bright >= 3) {
+        commentary = `${st}在${branch}宫为【${label}】，星力尚可，光芒稍减但仍有贵气。三方四正有吉星则可扶助。`;
+      } else if (bright === 2) {
+        commentary = `${st}在${branch}宫为【${label}】，星力平平，光芒黯淡，贵人运减弱。需视三方四正定吉凶。`;
+      } else {
+        commentary = `${st}在${branch}宫为【${label}】，火性星落陷光芒全失，主有志难伸、是非缠身。${hasJi ? '太阳为火性星，陷地化忌凶力倍增。' : ''}遇煞主目疾、头痛或父亲不利。`;
+      }
     } else {
-      // 不得地(1) 或 陷(0)
-      commentary = `${st}在${branch}宫为【${label}】，星力甚弱，正面特质难以发挥，负面特质容易显现。遇煞星同宫或冲照，凶性加重；即使遇吉星亦难完全化解。`;
+      // 纯吉型主星（天府、天相、天同、天梁、天机、太阴）
+      if (bright >= 5) {
+        commentary = `${st}在${branch}宫为【${label}】，星力最强，吉性充分发挥。主星庙旺则本宫事务顺遂，正面特质明显，遇吉星加会更佳，遇煞星亦能化解部分凶性。`;
+      } else if (bright >= 3) {
+        commentary = `${st}在${branch}宫为【${label}】，星力尚可，正面特质可以发挥但力度稍减。若三方四正有吉星扶助则趋吉，遇煞星则力不从心。`;
+      } else if (bright === 2) {
+        commentary = `${st}在${branch}宫为【${label}】，星力平平，吉凶特质均不明显。需视三方四正会合之星而定吉凶，逢吉则平顺，逢煞则不利。`;
+      } else {
+        commentary = `${st}在${branch}宫为【${label}】，星力甚弱，正面特质难以发挥，负面特质容易显现。遇煞星同宫或冲照，凶性加重；即使遇吉星亦难完全化解。`;
+      }
     }
-    items.push({ type: 'brightness', text: commentary, severity: bright <= 1 ? 1 : 0, src: '§27庙旺' });
+    const sev = bright <= 1 ? (isSiE || isHuo ? 2 : 1) : 0;
+    items.push({ type: 'brightness', text: commentary, severity: sev, src: '§27庙旺' });
   }
 
-  // 2a-aux. 六煞星庙旺解读
+  // 2a-aux. 六煞星庙旺解读（擎羊陀罗火铃，来源：rules_jiedu.md四煞分类）
   const SHA_STARS = ['擎羊','陀罗','火星','铃星'];
   for (const st of (sData.aux || [])) {
     if (!SHA_STARS.includes(st)) continue;
