@@ -402,7 +402,10 @@ function interpretPalace(ctx, palaceName, R) {
         if (sfSuffix) commentary += sfSuffix;
         else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '有吉则尚可驾驭' : '见煞则易走偏锋'}。`;
       } else {
-        commentary = `${st}在${branch}宫为【${label}】，四恶曜失陷遇煞大凶——杀气不受控制，破坏力极强，主灾祸刑伤。${isHuo && hasJi ? '此为火性星陷地化忌，凶力倍增。' : ''}`;
+        commentary = `${st}在${branch}宫为【${label}】，四恶曜失陷——杀气不受控制，破坏力极强。${isHuo && hasJi ? '此为火性星陷地化忌，凶力倍增。' : ''}`;
+        if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，失陷遇煞大凶，主灾祸刑伤。`;
+        else if (localJiCount > 0) commentary += `本宫有${localJiCount}吉星但难以完全化解失陷之凶性。`;
+        else commentary += '本宫虽无煞同守但失陷之凶性仍重。';
         if (starSpecial) commentary += starSpecial;
         if (sfSuffix) commentary += sfSuffix;
       }
@@ -420,7 +423,8 @@ function interpretPalace(ctx, palaceName, R) {
         if (sfSuffix) commentary += sfSuffix;
         else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '见吉可减少是非' : '是非难免'}。`;
       } else {
-        commentary = `${st}在${branch}宫为【${label}】，暗星失陷则是非缠身、口舌招灾，人际关系差，六亲缘薄多猜忌。遇煞星更主暗损、小人陷害。`;
+        commentary = `${st}在${branch}宫为【${label}】，暗星失陷则是非缠身、口舌招灾，人际关系差，六亲缘薄多猜忌。`;
+        if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，更主暗损、小人陷害。`;
         if (sfSuffix) commentary += sfSuffix;
       }
     } else if (isGu) {
@@ -436,7 +440,11 @@ function interpretPalace(ctx, palaceName, R) {
         commentary = `${st}在${branch}宫为【${label}】，财星平地则进财平平，孤克之性渐显，人际偏刚硬。`;
         if (sfSuffix) commentary += sfSuffix;
       } else {
-        commentary = `${st}在${branch}宫为【${label}】，财星失陷则财运受阻、破耗不断，刚克孤寡之性最重。遇煞星主破败损财，入六亲宫则刑克亲人。`;
+        commentary = `${st}在${branch}宫为【${label}】，财星失陷则财运受阻、破耗不断，刚克孤寡之性最重。`;
+        if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，主破败损财。`;
+        // 六亲宫检查（rules_jingcheng_ch1_7.md:305）
+        const LQ_GONG = ['父母','兄弟','夫妻','子女','交友'];
+        if (LQ_GONG.some(p => palaceName.startsWith(p))) commentary += '武曲失陷入六亲宫则刑克亲人。';
         if (sfSuffix) commentary += sfSuffix;
       }
     } else if (isHuo && !isSiE) {
@@ -453,7 +461,9 @@ function interpretPalace(ctx, palaceName, R) {
         if (sfSuffix) commentary += sfSuffix;
         else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount > preShaCount ? '逢吉则尚可' : '不利'}。`;
       } else {
-        commentary = `${st}在${branch}宫为【${label}】，火性星落陷光芒全失，主有志难伸、是非缠身。${hasJi ? '太阳为火性星，陷地化忌凶力倍增。' : ''}遇煞主目疾、头痛或父亲不利。`;
+        commentary = `${st}在${branch}宫为【${label}】，火性星落陷光芒全失，主有志难伸、是非缠身。${hasJi ? '太阳为火性星，陷地化忌凶力倍增。' : ''}`;
+        if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，主目疾、头痛或父亲不利。`;
+        else commentary += '虽无煞同守但陷地光芒全失，仍须注意健康与父亲运。';
         if (sfSuffix) commentary += sfSuffix;
       }
     } else {
@@ -494,9 +504,14 @@ function interpretPalace(ctx, palaceName, R) {
     const branch = getBranch(brIdx);
     let commentary = '';
     if (bright >= 5) {
-      commentary = `${st}在${branch}宫为【${label}】，煞星庙旺反有正用——可激发斗志与冲劲，若与吉星同宫则化煞为权，主有开创之力。`;
+      commentary = `${st}在${branch}宫为【${label}】，煞星庙旺反有正用——可激发斗志与冲劲。`;
+      if (localJiCount > 0) commentary += `本宫有${localJiCount}吉星同宫，化煞为权，主有开创之力。`;
+      else commentary += `本宫无吉星同守，煞性虽庙旺但缺吉星引化，激发力有限。`;
     } else if (bright <= 1) {
-      commentary = `${st}在${branch}宫为【${label}】，煞星落陷凶性最重，破坏力强，对本宫事务形成严重冲击。若再逢忌星或其他煞星同宫，凶上加凶。`;
+      commentary = `${st}在${branch}宫为【${label}】，煞星落陷凶性最重，破坏力强，对本宫事务形成严重冲击。`;
+      if (localHasJi) commentary += '本宫见化忌，凶上加凶。';
+      if (localShaCount > 1) commentary += `本宫另有${localShaCount - 1}煞同守，煞聚一宫凶力倍增。`;
+      if (localJiCount > 0) commentary += `幸有${localJiCount}吉星同宫可稍缓冲击。`;
     }
     if (commentary) {
       items.push({ type: 'brightness', text: commentary, severity: bright <= 1 ? 2 : 0, src: '§27庙旺' });
