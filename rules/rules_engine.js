@@ -351,6 +351,113 @@ function interpretPalace(ctx, palaceName, R) {
     }
   }
 
+  // 2a-sfsy. 三方四正综合庙旺解读（来源：rules_jiedu.md §207步骤2 + rules_jingcheng_compact.md §155大限判断法）
+  // 力量分配：本宫60%、对宫40%、合宫20%、邻宫10%（来源：《初级讲义》rules_jiedu.md:20）
+  if ((sData.main || []).length > 0) {
+    const sfBrs = getSanfangBrs(brIdx); // [本宫, 对宫, 三合1, 三合2]
+    const JI_STARS = ['左辅','右弼','天魁','天钺','文昌','文曲','禄存','天马'];
+    const SHA_SFS = ['擎羊','陀罗','火星','铃星','地空','地劫'];
+
+    // 收集三方四正所有主星庙旺
+    let sfMainBrights = [];
+    let sfJiCount = 0, sfShaCount = 0;
+    let sfHasJi = false; // 化忌
+    for (const b of sfBrs) {
+      const sd = ctx.stars[b] || { main: [], aux: [], hua: {} };
+      for (const st of (sd.main || [])) {
+        const br = getStarBrightness(ctx, st, b);
+        if (br >= 0) sfMainBrights.push({ star: st, br: b, bright: br, palace: ctx.palaceMap[b] || '' });
+      }
+      const allS = [...(sd.main || []), ...(sd.aux || [])];
+      for (const st of allS) {
+        if (JI_STARS.includes(st)) sfJiCount++;
+        if (SHA_SFS.includes(st)) sfShaCount++;
+      }
+      if (sd.hua) {
+        for (const h of Object.values(sd.hua)) {
+          if (h === '禄' || h === '权' || h === '科') sfJiCount++;
+          if (h === '忌') { sfShaCount++; sfHasJi = true; }
+        }
+      }
+    }
+
+    // 本宫主星平均亮度
+    const localBrights = (sData.main || []).map(st => getStarBrightness(ctx, st, brIdx)).filter(b => b >= 0);
+    const localAvg = localBrights.length > 0 ? localBrights.reduce((a, b) => a + b, 0) / localBrights.length : -1;
+    // 三方（非本宫）主星平均亮度
+    const remoteBrights = sfMainBrights.filter(x => x.br !== brIdx);
+    const remoteAvg = remoteBrights.length > 0 ? remoteBrights.reduce((a, b) => a + b.bright, 0) / remoteBrights.length : -1;
+
+    if (localAvg >= 0) {
+      let sfComment = '';
+      const palLabel = palaceName;
+
+      // 规则1：命宫专论——命身佳但财官迁三宫欠吉（rules_jiedu.md:217-222）
+      if (palaceName === '命宫' && localAvg >= 5) {
+        const caiBr = ctx.palaceToBr['财帛'];
+        const guanBr = ctx.palaceToBr['官禄'];
+        const qianBr = ctx.palaceToBr['迁移'];
+        const checkBrs = [caiBr, guanBr, qianBr].filter(b => b !== undefined);
+        let weakCount = 0;
+        let details = [];
+        for (const b of checkBrs) {
+          const sd = ctx.stars[b] || { main: [] };
+          for (const st of (sd.main || [])) {
+            const br = getStarBrightness(ctx, st, b);
+            if (br >= 0 && br <= 2) { weakCount++; details.push(`${ctx.palaceMap[b]}${st}${['陷','不得地','平'][br]}`); }
+          }
+        }
+        if (weakCount >= 2) {
+          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方有${details.join('、')}，命身虽佳而三宫欠吉——纵有才华亦难青云，秀而不实。`;
+          items.push({ type: 'sanfang_bright', text: sfComment, severity: 1, src: '§三方四正综合/jiedu217' });
+        } else if (sfShaCount >= 3 && sfJiCount <= 1) {
+          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正煞星${sfShaCount}颗而吉星仅${sfJiCount}颗，煞多吉少——主星虽强，一生仍多阻碍波折。`;
+          items.push({ type: 'sanfang_bright', text: sfComment, severity: 1, src: '§三方四正综合/jiedu207' });
+        }
+      }
+
+      // 规则2：本宫主星庙旺+三方吉多无煞→吉格（rules_jingcheng_compact.md:84,155）
+      if (localAvg >= 5 && sfJiCount >= 3 && sfShaCount === 0) {
+        sfComment = `三方四正综合：${palLabel}主星庙旺，三方四正有${sfJiCount}颗吉星扶助且无煞冲破——本宫事务大吉，顺遂亨通。`;
+        items.push({ type: 'sanfang_bright', text: sfComment, severity: -1, src: '§三方四正综合/jingcheng84' });
+      }
+      // 规则3：本宫主星庙旺+煞同守+三方吉凶混杂→阻滞辛劳（rules_jingcheng_compact.md:155）
+      else if (localAvg >= 5 && sfShaCount > 0 && sfJiCount > 0) {
+        if (palaceName !== '命宫' || !items.some(i => i.type === 'sanfang_bright')) {
+          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正吉${sfJiCount}煞${sfShaCount}混杂——虽有能力但过程多阻碍辛劳，需努力化解。`;
+          items.push({ type: 'sanfang_bright', text: sfComment, severity: 0, src: '§三方四正综合/jingcheng155' });
+        }
+      }
+      // 规则4：本宫主星失陷+三方煞凑→大凶（rules_jingcheng_compact.md:155）
+      else if (localAvg <= 2 && sfShaCount >= 3) {
+        sfComment = `三方四正综合：${palLabel}主星失陷，三方四正又有${sfShaCount}颗煞星凑聚${sfHasJi ? '且见化忌' : ''}——本宫事务凶多吉少，须格外注意防范。`;
+        items.push({ type: 'sanfang_bright', text: sfComment, severity: 2, src: '§三方四正综合/jingcheng155' });
+      }
+      // 规则5：本宫主星失陷但三方有吉扶→平常，不至大凶
+      else if (localAvg <= 2 && sfJiCount >= 2 && sfShaCount <= 1) {
+        sfComment = `三方四正综合：${palLabel}主星失陷，但三方四正有${sfJiCount}颗吉星扶助——虽本宫力弱，吉星可部分化解，不至大凶但仍需谨慎。`;
+        items.push({ type: 'sanfang_bright', text: sfComment, severity: 0, src: '§三方四正综合/jingcheng155' });
+      }
+
+      // 规则6：杀破狼三方聚——入庙富贵失陷漂泊（rules_data.json杀破狼格）
+      const sfAllMain = sfMainBrights.map(x => x.star);
+      const hasSha = sfAllMain.includes('七杀');
+      const hasPo = sfAllMain.includes('破军');
+      const hasLang = sfAllMain.includes('贪狼');
+      if (hasSha && hasPo && hasLang) {
+        const splBrights = sfMainBrights.filter(x => ['七杀','破军','贪狼'].includes(x.star));
+        const splAvg = splBrights.reduce((a, b) => a + b.bright, 0) / splBrights.length;
+        if (splAvg >= 5) {
+          sfComment = `杀破狼三方聚且入庙——主大富大贵，变革开创之格局，一生波澜壮阔但终有大成。`;
+          items.push({ type: 'sanfang_bright', text: sfComment, severity: -2, src: '§杀破狼格/庙旺' });
+        } else if (splAvg <= 2) {
+          sfComment = `杀破狼三方聚但失陷——主漂泊不定、起伏剧烈，开创力虽有但难以持久，一生多变动。`;
+          items.push({ type: 'sanfang_bright', text: sfComment, severity: 2, src: '§杀破狼格/失陷' });
+        }
+      }
+    }
+  }
+
   // 2b. Double-star lookup (双星组合速查)
   if (R.double_star && (sData.main || []).length >= 2) {
     const STAR_ABBR = {'紫微':'紫','天机':'机','太阳':'阳','武曲':'武','天同':'同','廉贞':'廉',
