@@ -102,7 +102,7 @@ button#calcBtn:hover { background: #b22222; }
 .palace {
   background: #fffef8;
   border: 1px solid #ddc880;
-  padding: 8px 6px 6px;
+  padding: 8px 6px 55px;
   min-height: 120px;
   position: relative;
 }
@@ -117,27 +117,18 @@ button#calcBtn:hover { background: #b22222; }
   grid-column: span 2;
   grid-row: span 2;
 }
-.palace-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid #ddc880;
-  padding-bottom: 3px;
-  margin-bottom: 4px;
-}
+.palace-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+.palace-top-left { font-size:0.7em; color:#888; }
+.palace-top-right { font-size:0.95em; color:#222; font-weight:bold; }
 .palace-name {
-  font-size: 0.8em;
+  font-size: 0.95em;
   color: #8b1a1a;
-}
-.palace-branch {
-  font-size: 1em;
-  color: #222222;
   font-weight: bold;
+  text-align: center;
+  margin: 2px 0;
 }
-.palace-stem {
-  font-size: 0.8em;
-  color: #5a3800;
-}
+.palace-bottom-left { position:absolute; bottom:4px; left:6px; font-size:0.65em; line-height:1.4; }
+.palace-bottom-right { position:absolute; bottom:4px; right:6px; font-size:0.65em; text-align:right; color:#7a6040; line-height:1.4; }
 .stars-main {
   font-size: 0.88em;
   color: #1a1a1a;
@@ -160,7 +151,6 @@ button#calcBtn:hover { background: #b22222; }
 .daxian-label {
   font-size: 0.7em;
   color: #0055bb;
-  margin-top: 4px;
   cursor: pointer;
   line-height: 1.4;
   user-select: none;
@@ -263,7 +253,7 @@ button#calcBtn:hover { background: #b22222; }
 
 /* 响应式 */
 @media (max-width: 600px) {
-  .palace { min-height: 90px; padding: 5px 4px; }
+  .palace { min-height: 90px; padding: 5px 4px 50px; }
   .stars-main { font-size: 0.78em; }
   .stars-aux { font-size: 0.68em; }
 }
@@ -404,7 +394,7 @@ button#calcBtn:hover { background: #b22222; }
 .r2-text .r2-sub { margin:8px 0 4px; font-weight:bold; color:#5a3800; border-bottom:1px dotted #d0c0a0; padding-bottom:2px; }
 
 /* 宫干四化小字 */
-.gonggan-sihua { font-size: 0.55em; color: #999; line-height: 1.2; margin-bottom: 1px; }
+.gonggan-sihua { font-size: 0.52em; color: #999; line-height: 1.2; margin-top: 2px; margin-bottom: 1px; }
 .gs-lu { color: #1a7a1a; margin-right: 2px; }
 .gs-quan { color: #b8860b; margin-right: 2px; }
 .gs-ke { color: #2266aa; margin-right: 2px; }
@@ -415,7 +405,7 @@ button#calcBtn:hover { background: #b22222; }
 .palace.sf-self { box-shadow: inset 0 0 0 3px #c00; background: #fff0f0 !important; }
 
 /* 流年/小限年份标注 */
-.liunian-label { font-size: 0.62em; color: #666; margin-top: 2px; line-height: 1.5; }
+.liunian-label { font-size: 0.62em; color: #666; line-height: 1.5; }
 .ln-tag { display: inline-block; background: #e8f0ff; color: #2a5599; padding: 0 3px; border-radius: 2px; font-weight: bold; margin-right: 2px; }
 .xx-tag { display: inline-block; background: #f0ffe8; color: #3a7722; padding: 0 3px; border-radius: 2px; font-weight: bold; margin-right: 2px; }
 
@@ -648,7 +638,7 @@ const MIAO_WANG = {
   '廉贞': [2,3,6,2,3,0,2,3,6,2,3,0],  // 全书：庙寅申 利辰戌丑未 陷巳亥
   '天府': [6,6,6,4,6,4,5,6,4,5,6,4],  // 全书：庙子丑未寅辰戌 旺午酉 地卯巳申亥 无陷
   '太阴': [6,6,5,0,0,0,0,2,3,5,5,6],  // 全书：庙亥子丑 旺寅酉戌 陷卯辰巳
-  '贪狼': [5,0,2,4,0,0,1,0,4,3,0,1],  // (保留原值，全书未列明细)
+  '贪狼': [5,5,2,4,6,0,1,5,4,3,6,1],  // 全书卷二：四墓贪狼庙旺宫，辰戌宫佳
   '巨门': [5,5,6,6,0,5,5,2,6,6,0,5],  // 全书：庙寅申卯酉 旺子午巳亥 陷辰戌
   '天相': [6,6,6,0,4,4,6,4,6,0,4,4],  // 全书：庙子午丑寅申 地辰戌巳亥未 陷卯酉
   '天梁': [6,5,6,6,6,0,6,5,0,4,6,0],  // 全书：庙子午寅卯辰戌 旺丑未 地酉 陷申巳亥
@@ -1771,7 +1761,7 @@ function renderChart(data) {
   const hourLabel = isLateZi ? '晚子时' : BRANCHES[hourBrIdx] + '时';
   document.getElementById('chart-title').textContent =
     `${y}年${m}月${d}日 ${hourLabel}（农历${lunarYear}年${lunarLeap?'闰':''}${lunarMonth}月${lunarDay}日）` +
-    ` ${yearStem}${yearBr}年 ${JU_NAMES[ju]} ${gender==='male'?'男':'女'}命`;
+    ` ${yearStem}${yearBr}年 ${JU_NAMES[ju]} ${(yearBrIdx%2===0)?'阳':'阴'}${gender==='male'?'男':'女'}`;
 
   // 传统方形布局：顺时针从巳开始
   // 外圈16宫格 + 中心2×2
@@ -1837,28 +1827,37 @@ function renderChart(data) {
     const isMing   = brIdx === mingGongBrIdx;
     const isShen   = brIdx === shenGongBrIdx;
 
-    // 头部
-    const header = document.createElement('div');
-    header.className = 'palace-header';
-    header.innerHTML =
-      `<span class="palace-name">${palName}${isMing?'<span class="tag-ming">【命】</span>':''}${isShen?'<span class="tag-shen">【身】</span>':''}</span>` +
-      `<span class="palace-stem">${stemName}</span>` +
-      `<span class="palace-branch">${brName}</span>`;
-    div.appendChild(header);
+    const starsInPalace = stars[brIdx];
+    const CHANGSHENG_SET = new Set(['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养']);
+    const BOTTOM_RIGHT_SET = new Set(['病符','指背','岁建']);
+    const EXCLUDE_AUX = new Set([...CHANGSHENG_SET, ...BOTTOM_RIGHT_SET]);
 
-    // 宫干四化（小字标注）
-    const gsh = SIHUA[stemName];
-    if (gsh) {
-      const gshDiv = document.createElement('div');
-      gshDiv.className = 'gonggan-sihua';
-      gshDiv.innerHTML = `<span class="gs-lu">${gsh.禄[0]}禄</span><span class="gs-quan">${gsh.权[0]}权</span><span class="gs-ke">${gsh.科[0]}科</span><span class="gs-ji">${gsh.忌[0]}忌</span>`;
-      div.appendChild(gshDiv);
+    // 从辅星中提取长生十二神名
+    let changshengName = '';
+    for (const sName of starsInPalace.aux) {
+      if (CHANGSHENG_SET.has(sName)) { changshengName = sName; break; }
+    }
+    // 从辅星中提取病符/指背/岁建
+    const bottomRightStars = [];
+    for (const sName of starsInPalace.aux) {
+      if (BOTTOM_RIGHT_SET.has(sName)) bottomRightStars.push(sName);
     }
 
-    // 主星
+    // 1. 顶行：长生十二神(左) + 天干地支(右)
+    const topDiv = document.createElement('div');
+    topDiv.className = 'palace-top';
+    topDiv.innerHTML = `<span class="palace-top-left">${changshengName}</span><span class="palace-top-right">${stemName}${brName}</span>`;
+    div.appendChild(topDiv);
+
+    // 2. 宫名（居中加粗）
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'palace-name';
+    nameDiv.innerHTML = `${palName}${isMing?'<span class="tag-ming">【命】</span>':''}${isShen?'<span class="tag-shen">【身】</span>':''}`;
+    div.appendChild(nameDiv);
+
+    // 3. 主星
     const mainDiv = document.createElement('div');
     mainDiv.className = 'stars-main';
-    const starsInPalace = stars[brIdx];
     let mainHTML = '';
     for (const sName of starsInPalace.main) {
       const huaType = starsInPalace.hua[sName];
@@ -1874,11 +1873,12 @@ function renderChart(data) {
     mainDiv.innerHTML = mainHTML;
     div.appendChild(mainDiv);
 
-    // 辅星（带庙旺标注）
+    // 4. 辅星（排除长生十二神、病符、指背、岁建）
     const auxDiv = document.createElement('div');
     auxDiv.className = 'stars-aux';
     let auxHTML = '';
     for (const sName of starsInPalace.aux) {
+      if (EXCLUDE_AUX.has(sName)) continue;
       const huaType = starsInPalace.hua[sName];
       const mwArrAux = MIAO_WANG[sName];
       const mwLevelAux = mwArrAux !== undefined ? mwArrAux[brIdx] : -1;
@@ -1892,42 +1892,49 @@ function renderChart(data) {
     auxDiv.innerHTML = auxHTML;
     div.appendChild(auxDiv);
 
-    // 大限年龄标签
-    if (dxN !== undefined) {
-      const dx = daXianData[dxN];
-      const dxDiv = document.createElement('div');
-      dxDiv.className = 'daxian-label';
-      dxDiv.textContent = `▶ ${dx.ageStart}–${dx.ageEnd}岁`;
-      div.appendChild(dxDiv);
+    // 5. 宫干四化（移到星曜下方）
+    const gsh = SIHUA[stemName];
+    if (gsh) {
+      const gshDiv = document.createElement('div');
+      gshDiv.className = 'gonggan-sihua';
+      gshDiv.innerHTML = `<span class="gs-lu">${gsh.禄[0]}禄</span><span class="gs-quan">${gsh.权[0]}权</span><span class="gs-ke">${gsh.科[0]}科</span><span class="gs-ji">${gsh.忌[0]}忌</span>`;
+      div.appendChild(gshDiv);
     }
 
-    // 流年/小限年份标注
-    const nowYear = new Date().getFullYear();
-    // 流年：该宫地支对应的年份（12年一循环，列出虚岁1~120范围内的）
+    // 6. 底部左侧（大限、流年、小限）
     const liuNianYears = [];
     for (let age = 1; age <= 120; age++) {
       const yr = lunarYear + age - 1;
       if (calcLiuNian(yr) === brIdx) liuNianYears.push(age);
     }
-    // 小限：该宫对应的虚岁
     const xiaoXianAges = [];
     for (let age = 1; age <= 120; age++) {
       if (calcXiaoXian(yearBrIdx, gender, age) === brIdx) xiaoXianAges.push(age);
     }
-    if (liuNianYears.length > 0 || xiaoXianAges.length > 0) {
-      const lnDiv = document.createElement('div');
-      lnDiv.className = 'liunian-label';
-      let html = '';
-      if (liuNianYears.length > 0) {
-        const display = liuNianYears.slice(0, 6).join(',');
-        html += `<span class="ln-tag">流年</span> ${display}`;
-      }
-      if (xiaoXianAges.length > 0) {
-        const display = xiaoXianAges.slice(0, 6).join(',');
-        html += `${liuNianYears.length > 0 ? '<br>' : ''}<span class="xx-tag">小限</span> ${display}`;
-      }
-      lnDiv.innerHTML = html;
-      div.appendChild(lnDiv);
+    let blHTML = '';
+    if (dxN !== undefined) {
+      const dx = daXianData[dxN];
+      blHTML += `<span class="daxian-label" style="position:static;font-size:inherit;margin:0">▶ ${dx.ageStart}–${dx.ageEnd}岁</span><br>`;
+    }
+    if (liuNianYears.length > 0) {
+      blHTML += `<span class="ln-tag">流年</span> ${liuNianYears.slice(0,6).join(',')}<br>`;
+    }
+    if (xiaoXianAges.length > 0) {
+      blHTML += `<span class="xx-tag">小限</span> ${xiaoXianAges.slice(0,6).join(',')}`;
+    }
+    if (blHTML) {
+      const blDiv = document.createElement('div');
+      blDiv.className = 'palace-bottom-left';
+      blDiv.innerHTML = blHTML;
+      div.appendChild(blDiv);
+    }
+
+    // 7. 底部右侧（病符、指背、岁建）
+    if (bottomRightStars.length > 0) {
+      const brDiv = document.createElement('div');
+      brDiv.className = 'palace-bottom-right';
+      brDiv.innerHTML = bottomRightStars.join('<br>');
+      div.appendChild(brDiv);
     }
 
     return div;
