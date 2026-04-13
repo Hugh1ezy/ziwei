@@ -638,7 +638,7 @@ const MIAO_WANG = {
   '廉贞': [2,3,6,2,3,0,2,3,6,2,3,0],  // 全书：庙寅申 利辰戌丑未 陷巳亥
   '天府': [6,6,6,4,6,4,5,6,4,5,6,4],  // 全书：庙子丑未寅辰戌 旺午酉 地卯巳申亥 无陷
   '太阴': [6,6,5,0,0,0,0,2,3,5,5,6],  // 全书：庙亥子丑 旺寅酉戌 陷卯辰巳
-  '贪狼': [5,5,2,4,6,0,1,5,4,3,6,1],  // 全书卷二：四墓贪狼庙旺宫，辰戌宫佳
+  '贪狼': [5,5,2,4,6,0,1,5,4,3,6,0],  // 全书卷二：四墓贪狼庙旺宫，辰戌宫佳；亥=陷
   '巨门': [5,5,6,6,0,5,5,2,6,6,0,5],  // 全书：庙寅申卯酉 旺子午巳亥 陷辰戌
   '天相': [6,6,6,0,4,4,6,4,6,0,4,4],  // 全书：庙子午丑寅申 地辰戌巳亥未 陷卯酉
   '天梁': [6,5,6,6,6,0,6,5,0,4,6,0],  // 全书：庙子午寅卯辰戌 旺丑未 地酉 陷申巳亥
@@ -648,8 +648,8 @@ const MIAO_WANG = {
   '铃星': [0,4,6,6,0,4,6,6,0,4,6,6],  // 全书：庙寅午戌 地巳酉丑 陷申子辰；木局(卯未亥)=庙
   '擎羊': [0,6,0,0,6,0,0,6,0,0,6,0],  // 全书：庙辰戌丑未 陷子午卯酉；四马(寅巳申亥)=陷
   '陀罗': [5,6,6,0,6,0,6,6,0,0,6,0],  // 全书：庙辰戌丑未 陷寅申巳亥；文墨天机：寅=庙
-  '文昌': [4,6,6,5,4,6,6,6,2,6,6,2],  // 保留原值（全书与文墨天机有分歧，以文墨天机为准）
-  '文曲': [4,6,4,5,4,6,6,5,4,6,6,5],  // 保留原值（全书与文墨天机有分歧，以文墨天机为准）
+  '文昌': [4,6,0,5,4,6,0,5,4,6,0,5],  // 全书：庙巳酉丑 地申子辰 陷寅午戌；木局(卯未亥)=旺
+  '文曲': [4,6,0,5,4,6,0,5,4,6,0,5],  // 全书：庙巳酉丑 地申子辰 陷寅午戌；木局(卯未亥)=旺
 };
 const MW_LABELS = ['陷','不','平','利','得','旺','庙'];
 const MW_CSS    = ['mw-xian','mw-bu','mw-ping','mw-li','mw-de','mw-wang','mw-miao'];
@@ -834,7 +834,7 @@ function getHourStars(hourBrIdx) {
 }
 
 // ---- 年支系诸星（来源：rules_book1.md §8）----
-function getYearBranchStars(yearBrIdx) {
+function getYearBranchStars(yearBrIdx, monthBrIdx) {
   // 天喜：从酉(9)起子年，逆时针
   const tianxi = (9 - yearBrIdx + 12) % 12;
   // 红鸾：从卯(3)起子年，逆时针
@@ -853,9 +853,9 @@ function getYearBranchStars(yearBrIdx) {
   const fengge = (10 - yearBrIdx + 12) % 12;
   // 解神：从戌(10)起子年，逆时针
   const jieshen = (10 - yearBrIdx + 12) % 12;
-  // 天马：寅午戌=申，申子辰=寅，巳酉丑=亥，亥卯未=巳（书第12步行1550）
+  // 天马：寅午戌=申，申子辰=寅，巳酉丑=亥，亥卯未=巳（以月支三合定位）
   const tianma_map = [2,11,8,5,2,11,8,5,2,11,8,5]; // 子丑寅卯辰巳午未申酉戌亥
-  const tianma = tianma_map[yearBrIdx];
+  const tianma = tianma_map[monthBrIdx];
   // 蜚廉：子=申,丑=酉,寅=戌,卯=巳,辰=午,巳=未,午=寅,未=卯,申=辰,酉=亥,戌=子,亥=丑
   const feilian_map = [8,9,10,5,6,7,2,3,4,11,0,1];
   const feilian = feilian_map[yearBrIdx];
@@ -1516,7 +1516,8 @@ function calculate() {
   const hourStars = getHourStars(hourBrIdx);
 
   // 14. 年支系诸星
-  const yearBrStars = getYearBranchStars(yearBrIdx);
+  const monthBrId = monthBranchIdx(lunarMonth);
+  const yearBrStars = getYearBranchStars(yearBrIdx, monthBrId);
 
   // 15. 年干系诸星
   const yearStemStars = getYearStemStars(yearStem);
@@ -3008,7 +3009,7 @@ function buildChartData(dateStr, hourRaw, gender) {
   const sihua = SIHUA[yearStem];
   const monthStars = getMonthStars(lunarMonth);
   const hourStars = getHourStars(hourBrIdx);
-  const yearBrStars = getYearBranchStars(yearBrIdx);
+  const yearBrStars = getYearBranchStars(yearBrIdx, monthBranchIdx(lunarMonth));
   const yearStemStars = getYearStemStars(yearStem);
   const huoLing = getHuoLing(yearBrIdx, hourBrIdx);
 
