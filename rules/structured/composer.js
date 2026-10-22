@@ -183,7 +183,7 @@
     const out = [];
     // 精成以任一对百官为准，全书等以有无左右为准：标准宽严不同
     if (hits.some(h => h.cond.includes('百官')) && all.some(e => e.text === '孤君'))
-      out.push({ topic: '提示', general: [], lines: ['本盘按精成的标准（府相、左右、昌曲、魁钺、日月、禄马任见一对）算得百官朝拱；按全书等较严的标准（以左辅右弼为核心，无左右即为孤君）则为孤君。两者是标准宽严不同，并非矛盾，下面两说并列。'] });
+      out.push({ topic: '提示', general: [], paras: [], lines: ['本盘按精成的标准（府相、左右、昌曲、魁钺、日月、禄马任见一对）算得百官朝拱；按全书等较严的标准（以左辅右弼为核心，无左右即为孤君）则为孤君。两者是标准宽严不同，并非矛盾，两说并列。'] });
     for (const topic of TOPIC_ORDER) {
       const es = all.filter(e => e.topic === topic);
       if (!es.length) continue;
@@ -202,30 +202,57 @@
         const segs = parts[0][1].n === 0 && parts.length > 1 ? [parts.slice(0, 1), parts.slice(1)] : [parts];
         for (const seg of segs) {
           const [lb, g0] = seg[0];
-          const dup = segs.length > 1 && seg !== segs[0] ? '（通论亦有）' : '';
-          const it = { text: e.text + dup, note: e.note,
+          const dup = segs.length > 1 && seg !== segs[0];
+          const it = { text: e.text, dup, note: e.note,
             srcText: [sset(g0.rules), ...seg.slice(1).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
           if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
           groups.get(lb).items.push(it);
         }
       }
-      const general = [], lines = [];
+      // paras：结构化结果（网页用，来源和条件可折叠）；general/lines：同内容的纯文字版
+      const paras = [];
       for (const [lb, g] of [...groups.entries()].sort((a, b) => a[1].n - b[1].n)) {
         // 同一组来源的结论连写，来源只标一次
         const bySrc = new Map();
         for (const e of g.items) { const k = e.srcText; if (!bySrc.has(k)) bySrc.set(k, []); bySrc.get(k).push(e); }
-        const body = [...bySrc.entries()].map(([k, list]) =>
-          list.map(e => e.text + (e.note || '')).join('、') + '〔' + k + '〕').join('；') + '。';
-        (g.n === 0 ? general : lines).push(lb + '：' + body);
+        paras.push({ cond: lb, general: g.n === 0,
+          segs: [...bySrc.entries()].map(([src, list]) => ({ src, items: list })) });
       }
-      out.push({ topic, general, lines });
+      const flat = e => e.text + (e.dup ? '（通论亦有）' : '') + (e.note || '');
+      const general = [], lines = [];
+      for (const pa of paras) {
+        const body = pa.segs.map(sg => sg.items.map(flat).join('、') + '〔' + sg.src + '〕').join('；') + '。';
+        (pa.general ? general : lines).push(pa.cond + '：' + body);
+      }
+      out.push({ topic, general, lines, paras });
     }
     return out;
   }
 
+  // ---------- 网页显示：只露结论，来源（每段短语后）和条件（整段末）折成小角标，点开才显示 ----------
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fold = (cls, tip) => '<sup class="rc-fold ' + cls + '" tabindex="0" role="button" data-tip="' + esc((cls === 'rc-cond' ? '条件：' : '出处：') + tip) + '">…</sup>';
+  function paraHTML(pa, hint) {
+    const body = pa.segs.map(sg => {
+      const extra = sg.items.filter(e => e.dup).length ? '；凡紫微坐命，通论亦有此说' : '';
+      const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
+      return sg.items.map(e => esc(e.text)).join('、') + fold('rc-src', sg.src + extra + (notes ? '。' + notes : ''));
+    }).join('；');
+    return '<p class="rc-para">' + body + '。' + fold('rc-cond', (pa.general ? '凡紫微坐命皆是（通论）' : pa.cond) +
+      (hint && /百官|左辅、右弼/.test(pa.cond) ? '。' + hint : '')) + '</p>';
+  }
+  function renderHTML(comp, opts) {
+    opts = opts || {};
+    const hint = (comp.find(t => t.topic === '提示') || { lines: [] }).lines[0];
+    return comp.filter(t => t.paras && t.paras.length).map(t => {
+      const ps = t.paras.filter(pa => opts.only === 'general' ? pa.general : opts.only === 'lines' ? !pa.general : true);
+      return ps.length ? '<div class="rc-topic"><h4>' + esc(t.topic) + '</h4>' + ps.map(pa => paraHTML(pa, hint)).join('') + '</div>' : '';
+    }).join('');
+  }
+
   const jiCount = F => countSF(F, LIUJI) + ['禄','权','科'].filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).length;
 
-  const api = { parseRules, parseSynonyms, extractFacts, match, compose, evalAtom, label };
+  const api = { parseRules, parseSynonyms, extractFacts, match, compose, renderHTML, evalAtom, label };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RuleComposer = api;
 })(this);
