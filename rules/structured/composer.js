@@ -223,26 +223,9 @@
     return out;
   }
 
-  // ---------- 程序查过、本盘不成立的格局（让读者知道不是漏了） ----------
-  function unmet(F) {
-    const has = s => inPalaces(F, F.sf, s);
-    const res = [];
-    const pairMiss = n => PAIRS[n].filter(s => !inPalaces(F, [...F.sf, ...F.jia], s));
-    if (!Object.values(PAIRS).some(p => pairOK(F, p)))
-      res.push('百官朝拱（精成）：六组对星无一成对');
-    if (!pairOK(F, PAIRS['左右'])) res.push('辅弼拱主：缺' + pairMiss('左右').join('、'));
-    const jq = [['左右', ['左辅','右弼']], ['昌曲', ['文昌','文曲']], ['魁钺', ['天魁','天钺']]].filter(([, g]) => !g.some(has));
-    if (jq.length) res.push('君臣庆会：三方四正缺' + jq.map(x => x[0]).join('、'));
-    const qi = ['禄','权','科'].filter(h => !(F.sihua[h] && has(F.sihua[h])));
-    if (qi.length) res.push('三奇（科权禄会齐）：化' + qi.join('、化') + '不在三方四正');
-    if (!evalAtom(F, '禄马交驰')) res.push('禄马交驰：禄存天马未同在本宫或对宫');
-    const ji = jiCount(F); if (ji < 4) res.push('吉多：本盘' + ji + '颗，门槛4颗');
-    const sha = countSF(F, LIUSHA); if (sha < 3) res.push('煞多：本盘' + sha + '颗，门槛3颗');
-    return res;
-  }
   const jiCount = F => countSF(F, LIUJI) + ['禄','权','科'].filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).length;
 
-  const api = { parseRules, parseSynonyms, extractFacts, match, compose, unmet, evalAtom, label };
+  const api = { parseRules, parseSynonyms, extractFacts, match, compose, evalAtom, label };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RuleComposer = api;
 })(this);
