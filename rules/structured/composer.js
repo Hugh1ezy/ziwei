@@ -154,8 +154,8 @@
       if (a === '煞') return '三方四正见' + present(SISHA);
       return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
         '无吉': '三方四正无六吉', '煞': '三方四正见四煞', '无煞': '三方四正无四煞', '四煞并见': '羊陀与火铃并见',
-        '三奇': '科权禄三方会齐', '吉多': '吉多（六吉与化禄权科共四颗以上）',
-        '煞多': '煞多（三颗以上）', '煞少': '煞少（一两颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
+        '三奇': '科权禄三方会齐', '吉多': '吉多（本盘' + jiCount(F) + '颗，门槛4颗）',
+        '煞多': '煞多（本盘' + countSF(F, LIUSHA) + '颗，门槛3颗）', '煞少': '煞少（本盘' + countSF(F, LIUSHA) + '颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
     });
     return part.length ? part.join('，') : '通论';
   }
@@ -167,37 +167,82 @@
     const canon = t => syn.map[t] || t;
     const entries = new Map();
     for (const r of hits) for (const it of r.items) {
-      const k = it.topic + '|' + canon(it.text);
-      if (!entries.has(k)) entries.set(k, { topic: it.topic, text: canon(it.text), rules: [] });
-      entries.get(k).rules.push(r);
+      // 不同书把同一结论归在不同主题时只列一次，主题取条件最少的那条规则
+      const k = canon(it.text);
+      if (!entries.has(k)) entries.set(k, { topic: it.topic, n: r.cond.length, text: k, rules: [] });
+      const e = entries.get(k);
+      if (r.cond.length < e.n) { e.topic = it.topic; e.n = r.cond.length; }
+      e.rules.push(r);
     }
-    const srcs = e => [...new Set(e.rules.map(r => r.src))].join('、');
+    // 相反说法：就地标注在后出现的一方，不再另列
+    const all = [...entries.values()];
+    for (const [a, b] of syn.opposed) {
+      const ea = all.find(e => e.text === a), eb = all.find(e => e.text === b);
+      if (ea && eb) eb.note = '（※与"' + a + '"说法相反）';
+    }
     const out = [];
-    // 定义不同造成的矛盾：精成以任一对百官为准，全书等以有无左右为准
-    if (hits.some(h => h.cond.includes('百官')) && [...entries.values()].some(e => e.text === '孤君'))
-      out.push({ topic: '提示', lines: ['本盘按精成的标准（府相、左右、昌曲、魁钺、日月、禄马任见一对）算得百官朝拱；按全书等较严的标准（以左辅右弼为核心，无左右即为孤君）则为孤君。两者是标准宽严不同，并非矛盾，下面两说并列。'] });
+    // 精成以任一对百官为准，全书等以有无左右为准：标准宽严不同
+    if (hits.some(h => h.cond.includes('百官')) && all.some(e => e.text === '孤君'))
+      out.push({ topic: '提示', general: [], lines: ['本盘按精成的标准（府相、左右、昌曲、魁钺、日月、禄马任见一对）算得百官朝拱；按全书等较严的标准（以左辅右弼为核心，无左右即为孤君）则为孤君。两者是标准宽严不同，并非矛盾，下面两说并列。'] });
     for (const topic of TOPIC_ORDER) {
-      const es = [...entries.values()].filter(e => e.topic === topic);
+      const es = all.filter(e => e.topic === topic);
       if (!es.length) continue;
+      // 同一结论在不同条件下都出现：只列在条件最少的那一组，其余书的来源后注明条件
       const groups = new Map();
       for (const e of es) {
-        const general = [...e.rules].sort((a, b) => a.cond.length - b.cond.length)[0];
-        const lb = label(F, general.cond);
-        if (!groups.has(lb)) groups.set(lb, { n: general.cond.length, items: [] });
-        groups.get(lb).items.push(e);
+        const byLb = new Map();
+        for (const r of e.rules) {
+          const lb = label(F, r.cond);
+          if (!byLb.has(lb)) byLb.set(lb, { n: r.cond.length, rules: [] });
+          byLb.get(lb).rules.push(r);
+        }
+        const parts = [...byLb.entries()].sort((a, b) => a[1].n - b[1].n);
+        const sset = rs => [...new Set(rs.map(r => r.src))].join('、');
+        // 通论（无附加条件）各盘相同，单独成条；有条件的说法另合一条
+        const segs = parts[0][1].n === 0 && parts.length > 1 ? [parts.slice(0, 1), parts.slice(1)] : [parts];
+        for (const seg of segs) {
+          const [lb, g0] = seg[0];
+          const dup = segs.length > 1 && seg !== segs[0] ? '（通论亦有）' : '';
+          const it = { text: e.text + dup, note: e.note,
+            srcText: [sset(g0.rules), ...seg.slice(1).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
+          if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
+          groups.get(lb).items.push(it);
+        }
       }
-      const lines = [...groups.entries()].sort((a, b) => a[1].n - b[1].n).map(([lb, g]) =>
-        lb + '：' + g.items.map(e => e.text + '〔' + srcs(e) + '〕').join('；') + '。');
-      for (const [a, b] of syn.opposed) {
-        const ea = es.find(e => e.text === a), eb = es.find(e => e.text === b);
-        if (ea && eb) lines.push('※ 各书说法相反：' + a + '〔' + srcs(ea) + '〕；' + b + '〔' + srcs(eb) + '〕。');
+      const general = [], lines = [];
+      for (const [lb, g] of [...groups.entries()].sort((a, b) => a[1].n - b[1].n)) {
+        // 同一组来源的结论连写，来源只标一次
+        const bySrc = new Map();
+        for (const e of g.items) { const k = e.srcText; if (!bySrc.has(k)) bySrc.set(k, []); bySrc.get(k).push(e); }
+        const body = [...bySrc.entries()].map(([k, list]) =>
+          list.map(e => e.text + (e.note || '')).join('、') + '〔' + k + '〕').join('；') + '。';
+        (g.n === 0 ? general : lines).push(lb + '：' + body);
       }
-      out.push({ topic, lines });
+      out.push({ topic, general, lines });
     }
     return out;
   }
 
-  const api = { parseRules, parseSynonyms, extractFacts, match, compose, evalAtom, label };
+  // ---------- 程序查过、本盘不成立的格局（让读者知道不是漏了） ----------
+  function unmet(F) {
+    const has = s => inPalaces(F, F.sf, s);
+    const res = [];
+    const pairMiss = n => PAIRS[n].filter(s => !inPalaces(F, [...F.sf, ...F.jia], s));
+    if (!Object.values(PAIRS).some(p => pairOK(F, p)))
+      res.push('百官朝拱（精成）：六组对星无一成对');
+    if (!pairOK(F, PAIRS['左右'])) res.push('辅弼拱主：缺' + pairMiss('左右').join('、'));
+    const jq = [['左右', ['左辅','右弼']], ['昌曲', ['文昌','文曲']], ['魁钺', ['天魁','天钺']]].filter(([, g]) => !g.some(has));
+    if (jq.length) res.push('君臣庆会：三方四正缺' + jq.map(x => x[0]).join('、'));
+    const qi = ['禄','权','科'].filter(h => !(F.sihua[h] && has(F.sihua[h])));
+    if (qi.length) res.push('三奇（科权禄会齐）：化' + qi.join('、化') + '不在三方四正');
+    if (!evalAtom(F, '禄马交驰')) res.push('禄马交驰：禄存天马未同在本宫或对宫');
+    const ji = jiCount(F); if (ji < 4) res.push('吉多：本盘' + ji + '颗，门槛4颗');
+    const sha = countSF(F, LIUSHA); if (sha < 3) res.push('煞多：本盘' + sha + '颗，门槛3颗');
+    return res;
+  }
+  const jiCount = F => countSF(F, LIUJI) + ['禄','权','科'].filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).length;
+
+  const api = { parseRules, parseSynonyms, extractFacts, match, compose, unmet, evalAtom, label };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RuleComposer = api;
 })(this);
