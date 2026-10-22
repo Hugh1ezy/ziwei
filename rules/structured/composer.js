@@ -1,0 +1,193 @@
+// 条件＋结论 规则匹配与成文（试点：紫微在命宫）
+// 只做三件事：①按条件匹配规则 ②同一结论（含同义说法）跨书合并、标注来源 ③按主题、按条件分组拼句。
+// 不生成任何书外内容：每一个结论都取自规则表的"结论"列（原书措辞拆成的最小单位），
+// 程序只加"：""；""。"和描述本盘事实的条件说明。
+(function (root) {
+  const BR = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  const STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  const CS_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
+  const JU_NAME = {2:'水二局',3:'木三局',4:'金四局',5:'土五局',6:'火六局'};
+
+  // ---- 条件词表中的星组（定义及出处见 conditions.md） ----
+  const GROUPS = {
+    // 精成："红、喜、贪、姚、咸、沐浴等桃花星"（贪狼为同宫主星，此处不计）
+    '桃花': ['红鸾','天喜','天姚','咸池','沐浴'],
+  };
+  const LIUJI = ['左辅','右弼','文昌','文曲','天魁','天钺']; // 字全书：吉星代表左辅右弼天魁天钺文昌文曲
+  const SISHA = ['擎羊','陀罗','火星','铃星'];                 // 字全书：凶徒代表擎羊陀罗火星铃星
+  // 精成："百官朝拱"对星：府相、左右、昌曲、魁钺、日月、禄马
+  const PAIRS = {
+    '府相': ['天府','天相'], '左右': ['左辅','右弼'], '昌曲': ['文昌','文曲'],
+    '魁钺': ['天魁','天钺'], '日月': ['太阳','太阴'], '禄马': ['禄存','天马'],
+  };
+  const RUMIAO = ['午','丑','未']; // 全书卷二：午宫入庙、丑未宫入庙
+
+  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','健康','僧道'];
+  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|健康|僧道):(.+)$/;
+
+  // ---------- 解析规则表、同义表 ----------
+  function parseRules(text) {
+    const rules = [];
+    for (const line of text.split(/\r?\n/)) {
+      if (!/^Z\d+\|/.test(line)) continue;
+      const [id, cond, topic, concl, quote, src] = line.split('|');
+      const items = concl.split('／').map(c => {
+        const m = c.match(TOPIC_RE);
+        return m ? { topic: m[1], text: m[2] } : { topic, text: c };
+      });
+      rules.push({ id, cond: cond === '—' ? [] : cond.split('＆'), topic, items, quote, src });
+    }
+    return rules;
+  }
+  function parseSynonyms(text) {
+    const map = {}, opposed = [];
+    for (const line of (text || '').split(/\r?\n/)) {
+      if (/^#/.test(line) || !line.trim()) continue;
+      let m;
+      if ((m = line.match(/^!相反\s+(.+?)\s*<>\s*(.+)$/))) { opposed.push([m[1].trim(), m[2].trim()]); continue; }
+      if ((m = line.match(/^(.+?)\s*=\s*(.+)$/))) for (const v of m[2].split('／')) map[v.trim()] = m[1].trim();
+    }
+    return { map, opposed };
+  }
+
+  // ---------- 从命盘数据取事实 ----------
+  // data：index.html 中 renderChart(data) 收到的对象
+  function extractFacts(data) {
+    const m = data.mingGongBrIdx;
+    const at = i => { const p = data.stars[((i % 12) + 12) % 12]; return [...p.main, ...p.aux]; };
+    const sf = [m, m + 4, m + 8, m + 6].map(i => ((i % 12) + 12) % 12); // 三方四正
+    const jia = [m - 1, m + 1].map(i => ((i % 12) + 12) % 12);           // 左右邻宫
+    return {
+      ming: m, sf, jia, at, branch: BR[m],
+      stem: STEMS[data.yearStemIdx], yearBr: BR[data.yearBrIdx],
+      gender: data.gender === 'female' ? '女' : '男',
+      ju: data.ju, shen: data.shenGongBrIdx,
+      sihua: data.sihua || {},
+    };
+  }
+
+  const expand = list => list.flatMap(s => GROUPS[s] || [s]);
+  const inPalaces = (F, idxs, star) => idxs.some(i => F.at(i).includes(star));
+
+  // ---------- 原子条件求值 ----------
+  function evalAtom(F, atom) {
+    let mm;
+    if ((mm = atom.match(/^支=(.+)$/)))   return mm[1].split('/').includes(F.branch);
+    if ((mm = atom.match(/^干=(.+)$/)))   return mm[1].split('/').includes(F.stem);
+    if ((mm = atom.match(/^支年=(.+)$/))) return mm[1].split('/').includes(F.yearBr);
+    if ((mm = atom.match(/^性别=(.+)$/))) return mm[1] === F.gender;
+    if ((mm = atom.match(/^局=(.+)$/)))   return mm[1].split('/').map(Number).includes(F.ju);
+    if ((mm = atom.match(/^长生=(.+)$/))) return mm[1].split('/').some(s => F.at(F.ming).includes(s));
+    if ((mm = atom.match(/^同宫:(.+)$/))) return expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming], s));
+    if ((mm = atom.match(/^会:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
+    if ((mm = atom.match(/^不会:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
+    if ((mm = atom.match(/^夹:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.jia, s));
+    if ((mm = atom.match(/^对:(.+)$/)))   return pairOK(F, PAIRS[mm[1]]);
+    if ((mm = atom.match(/^夹对:(.+)$/))) {
+      const [a, b] = PAIRS[mm[1]];
+      const [l, r] = F.jia;
+      return (F.at(l).includes(a) && F.at(r).includes(b)) || (F.at(l).includes(b) && F.at(r).includes(a));
+    }
+    if ((mm = atom.match(/^身宫有:(.+)$/))) return mm[1].split('/').some(s => F.at(F.shen).includes(s));
+    if ((mm = atom.match(/^化:(.+)=(.+)$/))) return mm[2].split('/').some(h => F.sihua[h] === mm[1]);
+    switch (atom) {
+      case '百官':   return Object.values(PAIRS).some(p => pairOK(F, p));
+      case '非百官': return !Object.values(PAIRS).some(p => pairOK(F, p));
+      case '吉':     return LIUJI.some(s => inPalaces(F, F.sf, s));
+      case '无吉':   return !LIUJI.some(s => inPalaces(F, F.sf, s));
+      case '煞':     return SISHA.some(s => inPalaces(F, F.sf, s));
+      case '无煞':   return !SISHA.some(s => inPalaces(F, F.sf, s));
+      case '四煞并见':
+        return ['擎羊','陀罗'].some(s => inPalaces(F, F.sf, s)) && ['火星','铃星'].some(s => inPalaces(F, F.sf, s));
+      case '三奇':
+        return ['禄','权','科'].every(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
+      case '无化忌': return !(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
+      case '入庙':   return RUMIAO.includes(F.branch);
+      case '禄马交驰': { // 字陆·评注：禄存天马同度本宫或对宫，或一居本宫一居对宫
+        const two = [F.ming, (F.ming + 6) % 12];
+        return inPalaces(F, two, '禄存') && inPalaces(F, two, '天马');
+      }
+    }
+    throw new Error('未知条件：' + atom);
+  }
+  // 对星：两颗都在三方四正或左右邻宫（精成"守照会拱或在左右邻宫相夹"）
+  function pairOK(F, [a, b]) {
+    const idx = [...F.sf, ...F.jia];
+    return inPalaces(F, idx, a) && inPalaces(F, idx, b);
+  }
+
+  function match(rules, F) {
+    if (!F.at(F.ming).includes('紫微')) return [];
+    return rules.filter(r => r.cond.every(a => evalAtom(F, a)));
+  }
+
+  // ---------- 条件说成人话（只描述本盘事实） ----------
+  function label(F, cond) {
+    const list = x => expand(x.split('/')).join('、');
+    const present = arr => expand(arr).filter(s => inPalaces(F, F.sf, s)).join('、');
+    const part = cond.map(a => {
+      let m;
+      if (/^支=/.test(a))   return '紫微在' + F.branch;
+      if (/^干=/.test(a))   return F.stem + '年生';
+      if (/^支年=/.test(a)) return F.yearBr + '年生';
+      if ((m = a.match(/^性别=(.+)/))) return m[1] + '命';
+      if (/^局=/.test(a))   return JU_NAME[F.ju];
+      if (/^长生=/.test(a)) return '命宫逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
+      if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
+      if ((m = a.match(/^会:(.+)/)))   return '三方四正见' + present(m[1].split('/'));
+      if ((m = a.match(/^不会:(.+)/))) return '三方四正无' + list(m[1]);
+      if ((m = a.match(/^夹:(.+)/)))   return list(m[1]) + '夹命';
+      if ((m = a.match(/^对:(.+)/)))   return m[1] + '成对会照';
+      if ((m = a.match(/^夹对:(.+)/))) return m[1] + '夹命';
+      if ((m = a.match(/^身宫有:(.+)/))) return '身宫有' + m[1];
+      if ((m = a.match(/^化:(.+)=(.+)/))) return m[1] + '化' + m[2].split('/').find(h => F.sihua[h] === m[1]);
+      if (a === '吉') return '三方四正见' + present(LIUJI);
+      if (a === '煞') return '三方四正见' + present(SISHA);
+      return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
+        '无吉': '三方四正无六吉', '煞': '三方四正见四煞', '无煞': '三方四正无四煞', '四煞并见': '羊陀与火铃并见',
+        '三奇': '科权禄三方会齐', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
+    });
+    return part.length ? part.join('，') : '通论';
+  }
+
+  // ---------- 成文 ----------
+  // 同一结论（含同义）跨书合并并列出全部来源；同一主题内按条件分组，通论在前
+  function compose(hits, F, syn) {
+    syn = syn || { map: {}, opposed: [] };
+    const canon = t => syn.map[t] || t;
+    const entries = new Map();
+    for (const r of hits) for (const it of r.items) {
+      const k = it.topic + '|' + canon(it.text);
+      if (!entries.has(k)) entries.set(k, { topic: it.topic, text: canon(it.text), rules: [] });
+      entries.get(k).rules.push(r);
+    }
+    const srcs = e => [...new Set(e.rules.map(r => r.src))].join('、');
+    const out = [];
+    // 定义不同造成的矛盾：精成以任一对百官为准，全书等以有无左右为准
+    if (hits.some(h => h.cond.includes('百官')) && [...entries.values()].some(e => e.text === '孤君'))
+      out.push({ topic: '提示', lines: ['本盘按精成"百官朝拱"的定义（府相、左右、昌曲、魁钺、日月、禄马任一对）算得百官朝拱；按全书等"无左右为孤君"的说法又算孤君。两说定义不同，下面并列。'] });
+    for (const topic of TOPIC_ORDER) {
+      const es = [...entries.values()].filter(e => e.topic === topic);
+      if (!es.length) continue;
+      const groups = new Map();
+      for (const e of es) {
+        const general = [...e.rules].sort((a, b) => a.cond.length - b.cond.length)[0];
+        const lb = label(F, general.cond);
+        if (!groups.has(lb)) groups.set(lb, { n: general.cond.length, items: [] });
+        groups.get(lb).items.push(e);
+      }
+      const lines = [...groups.entries()].sort((a, b) => a[1].n - b[1].n).map(([lb, g]) =>
+        lb + '：' + g.items.map(e => e.text + '〔' + srcs(e) + '〕').join('；') + '。');
+      for (const [a, b] of syn.opposed) {
+        const ea = es.find(e => e.text === a), eb = es.find(e => e.text === b);
+        if (ea && eb) lines.push('※ 各书说法相反：' + a + '〔' + srcs(ea) + '〕；' + b + '〔' + srcs(eb) + '〕。');
+      }
+      out.push({ topic, lines });
+    }
+    return out;
+  }
+
+  const api = { parseRules, parseSynonyms, extractFacts, match, compose, evalAtom, label };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.RuleComposer = api;
+})(this);
