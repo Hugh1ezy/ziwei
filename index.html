@@ -2564,8 +2564,33 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   const paragraphs = []; // [{context, sentences}]
   let currentPara = { context: null, sentences: [] };
 
+  const reGenderHead = /^[\s▲◇△☆“"]*(?:[一-鿿]{2,3}?(?:星)?)?(?:入)?(女|男)(?:命|性)/;
   for (const sentence of sentences) {
     if (!sentence.trim()) continue;
+
+    // 性别段落头："▲紫微女命……""紫微入男命吉凶诀""女命，……"；▲开头的新段落结束上一个性别段落
+    const gm = sentence.match(reGenderHead);
+    if (gm) {
+      const gctx = { type: 'gender', gender: gm[1] === '女' ? 'female' : 'male' };
+      const inGender = currentPara.context && currentPara.context.type === 'gender';
+      if (/^\s*▲/.test(sentence) || /命吉凶诀/.test(sentence)) {
+        // 成段的男命/女命论述：直到下一个▲或下一个吉凶诀为止
+        if (currentPara.sentences.length > 0) paragraphs.push(currentPara);
+        currentPara = { context: gctx, sentences: [sentence] };
+      } else {
+        // 单句"女命，……"：只管这一句，之后回到原段落
+        const prevCtx = inGender ? null : currentPara.context;
+        if (currentPara.sentences.length > 0) paragraphs.push(currentPara);
+        paragraphs.push({ context: gctx, sentences: [sentence] });
+        currentPara = { context: prevCtx, sentences: [] };
+      }
+      continue;
+    }
+    if ((/^\s*▲/.test(sentence) || /吉凶诀/.test(sentence)) && currentPara.context && currentPara.context.type === 'gender') {
+      paragraphs.push(currentPara);
+      currentPara = { context: null, sentences: [sentence] };
+      continue;
+    }
 
     // 检测星组合段落头
     const comboStars = detectStarComboHeader(sentence);
@@ -2602,6 +2627,10 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   for (const para of paragraphs) {
     // 检查段落级别的条件
     if (para.context) {
+      if (para.context.type === 'gender') {
+        // 性别段落：与命主性别不符则整段跳过
+        if (ctx.gender && para.context.gender !== ctx.gender) continue;
+      }
       if (para.context.type === 'combo') {
         // 星组合段落：检查本宫是否有这些主星
         const needed = para.context.stars;
@@ -2657,7 +2686,13 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
     }
   }
 
-  return result.join('');
+  // 句中"，女命……"/"，男命……"分句：与命主性别不符的删去（到下一个；或。为止）
+  let joinedAll = result.join('');
+  if (ctx.gender) {
+    const other = ctx.gender === 'male' ? '女' : '男';
+    joinedAll = joinedAll.replace(new RegExp('[，,]\\s*' + other + '命[^；。]*', 'g'), '');
+  }
+  return joinedAll;
 }
 
 // 条件句注释：在"加吉"/"加煞"等条件关键词后插入具体星名
@@ -2770,7 +2805,9 @@ function rule2Lookup(starName, palaceName, branchIdx) {
   if (palaceName === '命宫') {
     const data = RULE2_MINGONG[starKey];
     if (!data) return null;
-    return data.branches?.[branch] || data.general || null;
+    // 通论（星性、容貌、性情、组合喜忌、四化、男女命）＋本地支专论，一并交给条件过滤
+    const parts = [data.general, data.branches?.[branch]].filter(Boolean);
+    return parts.length ? parts.join(' ') : null;
   } else {
     const palaceKey = PALACE_SUFFIX_MAP[palaceName] || (palaceName + '宫');
     const palaceData = RULE2_OTHER[palaceKey];

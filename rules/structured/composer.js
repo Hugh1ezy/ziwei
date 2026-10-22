@@ -15,6 +15,7 @@
   };
   const LIUJI = ['左辅','右弼','文昌','文曲','天魁','天钺']; // 字全书：吉星代表左辅右弼天魁天钺文昌文曲
   const SISHA = ['擎羊','陀罗','火星','铃星'];                 // 字全书：凶徒代表擎羊陀罗火星铃星
+  const LIUSHA = [...SISHA, '地空', '地劫'];
   // 精成："百官朝拱"对星：府相、左右、昌曲、魁钺、日月、禄马
   const PAIRS = {
     '府相': ['天府','天相'], '左右': ['左辅','右弼'], '昌曲': ['文昌','文曲'],
@@ -29,7 +30,7 @@
   function parseRules(text) {
     const rules = [];
     for (const line of text.split(/\r?\n/)) {
-      if (!/^Z\d+\|/.test(line)) continue;
+      if (!/^Z\d+[a-z]?\|/.test(line)) continue;
       const [id, cond, topic, concl, quote, src] = line.split('|');
       const items = concl.split('／').map(c => {
         const m = c.match(TOPIC_RE);
@@ -68,6 +69,7 @@
 
   const expand = list => list.flatMap(s => GROUPS[s] || [s]);
   const inPalaces = (F, idxs, star) => idxs.some(i => F.at(i).includes(star));
+  const countSF = (F, list) => F.sf.reduce((n, i) => n + list.filter(s => F.at(i).includes(s)).length, 0);
 
   // ---------- 原子条件求值 ----------
   function evalAtom(F, atom) {
@@ -101,6 +103,13 @@
         return ['擎羊','陀罗'].some(s => inPalaces(F, F.sf, s)) && ['火星','铃星'].some(s => inPalaces(F, F.sf, s));
       case '三奇':
         return ['禄','权','科'].every(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
+      // 用户定的门槛（2026-10-22）：吉多＝六吉＋化禄权科≥4；煞多＝羊陀火铃空劫≥3，煞少＝1–2
+      case '吉多':   return countSF(F, LIUJI) + ['禄','权','科'].filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).length >= 4;
+      case '煞多':   return countSF(F, LIUSHA) >= 3;
+      case '煞少':   { const n = countSF(F, LIUSHA); return n >= 1 && n <= 2; }
+      // 用户定：左右、昌曲、魁钺三组各见至少一颗
+      case '君臣庆会':
+        return [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']].every(g => g.some(s => inPalaces(F, F.sf, s)));
       case '无化忌': return !(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
       case '入庙':   return RUMIAO.includes(F.branch);
       case '禄马交驰': { // 字陆·评注：禄存天马同度本宫或对宫，或一居本宫一居对宫
@@ -145,7 +154,8 @@
       if (a === '煞') return '三方四正见' + present(SISHA);
       return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
         '无吉': '三方四正无六吉', '煞': '三方四正见四煞', '无煞': '三方四正无四煞', '四煞并见': '羊陀与火铃并见',
-        '三奇': '科权禄三方会齐', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
+        '三奇': '科权禄三方会齐', '吉多': '吉多（六吉与化禄权科共四颗以上）',
+        '煞多': '煞多（三颗以上）', '煞少': '煞少（一两颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
     });
     return part.length ? part.join('，') : '通论';
   }
@@ -165,7 +175,7 @@
     const out = [];
     // 定义不同造成的矛盾：精成以任一对百官为准，全书等以有无左右为准
     if (hits.some(h => h.cond.includes('百官')) && [...entries.values()].some(e => e.text === '孤君'))
-      out.push({ topic: '提示', lines: ['本盘按精成"百官朝拱"的定义（府相、左右、昌曲、魁钺、日月、禄马任一对）算得百官朝拱；按全书等"无左右为孤君"的说法又算孤君。两说定义不同，下面并列。'] });
+      out.push({ topic: '提示', lines: ['本盘按精成的标准（府相、左右、昌曲、魁钺、日月、禄马任见一对）算得百官朝拱；按全书等较严的标准（以左辅右弼为核心，无左右即为孤君）则为孤君。两者是标准宽严不同，并非矛盾，下面两说并列。'] });
     for (const topic of TOPIC_ORDER) {
       const es = [...entries.values()].filter(e => e.topic === topic);
       if (!es.length) continue;
