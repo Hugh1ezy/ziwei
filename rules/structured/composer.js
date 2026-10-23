@@ -231,15 +231,18 @@
 
   // ---------- 网页显示：只露结论，来源（每段短语后）和条件（整段末）折成小角标，点开才显示 ----------
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const fold = (cls, tip) => '<sup class="rc-fold ' + cls + '" tabindex="0" role="button" data-tip="' + esc((cls === 'rc-cond' ? '条件：' : '出处：') + tip) + '">…</sup>';
+  // 出处：有出处的短语下加虚线，点短语看出处；条件：每段前的"·"，点它看条件
+  const tipAttr = tip => ' tabindex="0" role="button" data-tip="' + esc(tip) + '"';
   function paraHTML(pa, hint) {
     const body = pa.segs.map(sg => {
       const extra = sg.items.filter(e => e.dup).length ? '；凡紫微坐命，通论亦有此说' : '';
       const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
-      return sg.items.map(e => esc(e.text)).join('、') + fold('rc-src', sg.src + extra + (notes ? '。' + notes : ''));
+      return '<span class="rc-fold rc-src"' + tipAttr('出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
+        sg.items.map(e => esc(e.text)).join('、') + '</span>';
     }).join('；');
-    return '<p class="rc-para">' + body + '。' + fold('rc-cond', (pa.general ? '凡紫微坐命皆是（通论）' : pa.cond) +
-      (hint && /百官|左辅、右弼/.test(pa.cond) ? '。' + hint : '')) + '</p>';
+    const cond = '条件：' + (pa.general ? '凡紫微坐命皆是（通论）' : pa.cond) +
+      (hint && /百官|左辅、右弼/.test(pa.cond) ? '。' + hint : '');
+    return '<p class="rc-para"><span class="rc-fold rc-cond"' + tipAttr(cond) + '>·</span>' + body + '。</p>';
   }
   function renderHTML(comp, opts) {
     opts = opts || {};
