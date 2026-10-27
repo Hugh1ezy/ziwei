@@ -10,6 +10,8 @@
 <script src="rules/rule2_data.js"></script>
 <!-- 规则推理引擎（编码自rules_jiedu.md，纯客户端无需API） -->
 <script src="rules/rules_engine.js"></script>
+<!-- 条件＋结论 结构化解读（试点：紫微在命宫），规则表见 rules/structured/ -->
+<script src="rules/structured/composer.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -350,6 +352,21 @@ button#calcBtn:hover { background: #b22222; }
 }
 .r2-tab:hover { background: #fdf0d8; }
 .r2-tab.active { background: #2d5016; color: #fff; border-color: #2d5016; }
+/* 结构化解读：只露结论；出处＝短语下虚线，条件＝段首"·" */
+.rc-box { font-size: 1.02em; line-height: 1.9; }
+.rc-topic h4 { font-size: 0.82em; font-weight: bold; letter-spacing: .2em; color: #8b1a1a; margin: 10px 0 2px; }
+.rc-para { margin: 0 0 8px; position: relative; padding-left: 1.1em; }
+.rc-fold { outline: none; border-radius: 2px; }
+.rc-src { text-decoration: underline dotted #9a9184; text-decoration-thickness: 1.5px; text-underline-offset: .32em; padding-bottom: .5em; }
+.rc-src.near, .rc-src.on, .rc-src:focus-visible { text-decoration-color: #8b1a1a; }
+.rc-para:has(.near) { cursor: pointer; }
+.rc-src.on { text-decoration-style: solid; }
+.rc-cond { position: absolute; left: 0; top: 0; width: 1.1em; font-weight: bold; cursor: pointer; }
+.rc-cond:hover, .rc-cond.on, .rc-cond:focus-visible { color: #8b1a1a; }
+#rc-tip { position: absolute; z-index: 1000; max-width: min(22rem, calc(100vw - 16px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.6; padding: 7px 10px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#rc-tip[hidden] { display: none; }
+.rc-gen, .rc-raw { margin-top: 10px; font-size: 0.95em; }
+.rc-gen summary, .rc-raw summary { cursor: pointer; color: #7a746b; font-size: 0.9em; }
 #r2-content {
   font-size: 0.88em;
   line-height: 1.8;
@@ -1727,7 +1744,9 @@ function updateBottomNavDaXian(n) {
   }
 }
 
+let _lastChartData = null; // 结构化解读用
 function renderChart(data) {
+  _lastChartData = data;
   const {
     y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
     yearStem,yearBr,ju,
@@ -2816,6 +2835,56 @@ function rule2Lookup(starName, palaceName, branchIdx) {
   }
 }
 
+
+// ===== 结构化解读（条件＋结论，只做措辞连接，不加书外内容）=====
+// 已结构化的星：命宫主星 → 规则表文件
+const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt' };
+const _structCache = {};
+async function loadStructuredRules() {
+  if (typeof RuleComposer === 'undefined') return;
+  try {
+    if (!_structCache.__syn) _structCache.__syn = RuleComposer.parseSynonyms(await (await fetch('rules/structured/synonyms.txt')).text());
+    for (const [star, url] of Object.entries(STRUCTURED_RULES))
+      if (!_structCache[star]) _structCache[star] = RuleComposer.parseRules(await (await fetch(url)).text());
+  } catch (e) { console.warn('结构化规则加载失败:', e); }
+}
+function renderStructured(star) {
+  const rules = _structCache[star];
+  if (!rules || !_lastChartData) return null;
+  const F = RuleComposer.extractFacts(_lastChartData);
+  const hits = RuleComposer.match(rules, F);
+  if (!hits.length) return null;
+  const comp = RuleComposer.compose(hits, F, _structCache.__syn);
+  const gen = RuleComposer.renderHTML(comp, { only: 'general' });
+  const lines = RuleComposer.renderHTML(comp, { only: 'lines' });
+  return '<div class="rc-box">' + lines +
+    (gen ? '<details class="rc-gen"><summary>凡紫微坐命都适用的通论</summary>' + gen + '</details>' : '') + '</div>';
+}
+// 点短语下的虚线看出处，点段首"·"看条件
+(function initRcTip() {
+  let tip = null, cur = null;
+  const onLine = (el, e) => { const em = parseFloat(getComputedStyle(el).fontSize);
+    for (const r of el.getClientRects()) if (e.clientX >= r.left - 2 && e.clientX <= r.right + 2 && e.clientY <= r.bottom && e.clientY >= r.bottom - 0.6 * em) return true;
+    return false; };
+  const lineAt = e => { const pa = e.target.closest && e.target.closest('.rc-para'); if (!pa) return null;
+    for (const x of pa.querySelectorAll('.rc-src')) if (onLine(x, e)) return x; return null; };
+  const hide = () => { if (cur) cur.classList.remove('on'); cur = null; if (tip) tip.hidden = true; };
+  const show = el => {
+    if (cur === el) { hide(); return; } hide(); cur = el; el.classList.add('on');
+    if (!tip) { tip = document.createElement('div'); tip.id = 'rc-tip'; document.body.appendChild(tip); }
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth;
+    const x = Math.max(8, Math.min(r.left + scrollX - 8, document.documentElement.clientWidth - w - 8));
+    tip.style.left = x + 'px'; tip.style.top = (r.bottom + scrollY + 6) + 'px';
+  };
+  document.addEventListener('mousemove', e => { const f = lineAt(e);
+    document.querySelectorAll('.rc-src.near').forEach(x => { if (x !== f) x.classList.remove('near'); }); if (f) f.classList.add('near'); });
+  document.addEventListener('click', e => { const f = (e.target.closest && e.target.closest('.rc-cond')) || lineAt(e);
+    if (f) { e.stopPropagation(); show(f); } else if (!(e.target.closest && e.target.closest('#rc-tip'))) hide(); });
+  document.addEventListener('keydown', e => { const f = e.target.closest && e.target.closest('.rc-fold[data-tip]');
+    if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(f); } if (e.key === 'Escape') hide(); });
+})();
+
 // 生成单个宫的解读 HTML
 function renderRule2Palace(branchIdx) {
   if (!_rule2State) return '<div class="r2-no-data">请先排盘</div>';
@@ -2886,6 +2955,14 @@ function renderRule2Palace(branchIdx) {
     const jiShaSuffix = jiShaHtml ? ` —— ${jiShaHtml}` : '';
     const gengNote = (star === '天同' && huaType === '忌') ? `<span style="color:#888;font-size:0.8em">${GENG_TIANXIANG_NOTE}</span>` : '';
     sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${gengNote}${mwLabel}${jiShaSuffix}</div>`;
+    const structured = (palaceName === '命宫' && !isOpp && STRUCTURED_RULES[star]) ? renderStructured(star) : null;
+    if (structured) {
+      // 已结构化：只显示本盘成立的结论；原书全文收起备查
+      const raw = text ? formatText(typeof filterRuleText === 'function' ? filterRuleText(text, targetBrIdx, stars, star) : text) : '';
+      sec += structured + (raw ? `<details class="rc-raw"><summary>原书全文（精成，备查）</summary><div class="r2-text">${raw}</div></details>` : '');
+      sec += `</div>`;
+      return sec;
+    }
     if (text) {
       // 恢复：按宫位/庙陷/吉煞过滤文本 + 吉煞条件标注
       if (typeof filterRuleText === 'function') {
@@ -2957,6 +3034,7 @@ async function toggleRule2Panel() {
         injectEngineStyles();
       }
     }
+    await loadStructuredRules();
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
