@@ -1,4 +1,4 @@
-// 条件＋结论 规则匹配与成文（试点：紫微在命宫）
+// 条件＋结论 规则匹配与成文（命宫主星：紫微、天机……）
 // 只做三件事：①按条件匹配规则 ②同一结论（含同义说法）跨书合并、标注来源 ③按主题、按条件分组拼句。
 // 不生成任何书外内容：每一个结论都取自规则表的"结论"列（原书措辞拆成的最小单位），
 // 程序只加"：""；""。"和描述本盘事实的条件说明。
@@ -21,16 +21,22 @@
     '府相': ['天府','天相'], '左右': ['左辅','右弼'], '昌曲': ['文昌','文曲'],
     '魁钺': ['天魁','天钺'], '日月': ['太阳','太阴'], '禄马': ['禄存','天马'],
   };
-  const RUMIAO = ['午','丑','未']; // 全书卷二：午宫入庙、丑未宫入庙
+  const RUMIAO = ['午','丑','未']; // 紫微：全书卷二"午宫入庙""丑未宫入庙"
+  // 各星庙旺、落陷的地支（只用于"庙旺""陷"两个条件；出处见 conditions.md）
+  const MIAO = {
+    '天机': { '庙旺': ['子','午','卯','酉'], '陷': ['丑','未'] }, // 精成、全书卷二：子午庙，卯酉旺，丑未陷
+  };
+  // 十二宫：命宫起逆数（兄弟在命宫前一宫）
+  const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
 
-  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','健康','僧道'];
-  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|健康|僧道):(.+)$/;
+  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','六亲','健康','僧道'];
+  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|六亲|健康|僧道):(.+)$/;
 
   // ---------- 解析规则表、同义表 ----------
   function parseRules(text) {
     const rules = [];
     for (const line of text.split(/\r?\n/)) {
-      if (!/^Z\d+[a-z]?\|/.test(line)) continue;
+      if (!/^[A-Z]\d+[a-z]?\|/.test(line)) continue;
       const [id, cond, topic, concl, quote, src] = line.split('|');
       const items = concl.split('／').map(c => {
         const m = c.match(TOPIC_RE);
@@ -91,7 +97,12 @@
       return (F.at(l).includes(a) && F.at(r).includes(b)) || (F.at(l).includes(b) && F.at(r).includes(a));
     }
     if ((mm = atom.match(/^身宫有:(.+)$/))) return mm[1].split('/').some(s => F.at(F.shen).includes(s));
-    if ((mm = atom.match(/^化:(.+)=(.+)$/))) return mm[2].split('/').some(h => F.sihua[h] === mm[1]);
+    if ((mm = atom.match(/^对宫:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, [F.sf[3]], s));
+    if ((mm = atom.match(/^会全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.sf, s));
+    if ((mm = atom.match(/^夹全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.jia, s));
+    if ((mm = atom.match(/^宫:(.+?)=(.+)$/))) return expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
+    if ((mm = atom.match(/^化:(.+)=(.+)$/))) return mm[2].split('/').some(h => mm[1].split('/').includes(F.sihua[h]));
+    if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     switch (atom) {
       case '百官':   return Object.values(PAIRS).some(p => pairOK(F, p));
       case '非百官': return !Object.values(PAIRS).some(p => pairOK(F, p));
@@ -111,6 +122,8 @@
       case '君臣庆会':
         return [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']].every(g => g.some(s => inPalaces(F, F.sf, s)));
       case '无化忌': return !(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
+      case '化忌':   return !!(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
+      case '庙旺': case '陷': return !!(MIAO[F.star] && MIAO[F.star][atom].includes(F.branch));
       case '入庙':   return RUMIAO.includes(F.branch);
       case '禄马交驰': { // 字陆·评注：禄存天马同度本宫或对宫，或一居本宫一居对宫
         const two = [F.ming, (F.ming + 6) % 12];
@@ -125,8 +138,12 @@
     return inPalaces(F, idx, a) && inPalaces(F, idx, b);
   }
 
-  function match(rules, F) {
-    if (!F.at(F.ming).includes('紫微')) return [];
+  const palAt = (F, name) => (((F.ming - PALACE_IDX[name]) % 12) + 12) % 12;
+
+  // star：命宫主星（默认紫微）
+  function match(rules, F, star) {
+    F.star = star || F.star || '紫微';
+    if (!F.at(F.ming).includes(F.star)) return [];
     return rules.filter(r => r.cond.every(a => evalAtom(F, a)));
   }
 
@@ -136,7 +153,7 @@
     const present = arr => expand(arr).filter(s => inPalaces(F, F.sf, s)).join('、');
     const part = cond.map(a => {
       let m;
-      if (/^支=/.test(a))   return '紫微在' + F.branch;
+      if (/^支=/.test(a))   return (F.star || '紫微') + '在' + F.branch;
       if (/^干=/.test(a))   return F.stem + '年生';
       if (/^支年=/.test(a)) return F.yearBr + '年生';
       if ((m = a.match(/^性别=(.+)/))) return m[1] + '命';
@@ -149,13 +166,19 @@
       if ((m = a.match(/^对:(.+)/)))   return m[1] + '成对会照';
       if ((m = a.match(/^夹对:(.+)/))) return m[1] + '夹命';
       if ((m = a.match(/^身宫有:(.+)/))) return '身宫有' + m[1];
-      if ((m = a.match(/^化:(.+)=(.+)/))) return m[1] + '化' + m[2].split('/').find(h => F.sihua[h] === m[1]);
+      if ((m = a.match(/^对宫:(.+)/)))   return '对宫有' + expand(m[1].split('/')).filter(s => inPalaces(F, [F.sf[3]], s)).join('、');
+      if ((m = a.match(/^会全:(.+)/)))   return '三方四正' + list(m[1]) + '会齐';
+      if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + '夹命';
+      if ((m = a.match(/^宫:(.+?)=(.+)/))) return m[1] + '宫有' + expand(m[2].split('/')).filter(s => inPalaces(F, [palAt(F, m[1])], s)).join('、');
+      if ((m = a.match(/^化:(.+)=(.+)/))) { const h = m[2].split('/').find(h => m[1].split('/').includes(F.sihua[h])); return F.sihua[h] + '化' + h; }
+      if ((m = a.match(/^会化:(.+)/)))   return '三方四正见' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if (a === '吉') return '三方四正见' + present(LIUJI);
       if (a === '煞') return '三方四正见' + present(SISHA);
       return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
         '无吉': '三方四正无六吉', '煞': '三方四正见四煞', '无煞': '三方四正无四煞', '四煞并见': '羊陀与火铃并见',
         '三奇': '科权禄三方会齐', '吉多': '吉多（本盘' + jiCount(F) + '颗，门槛4颗）',
-        '煞多': '煞多（本盘' + countSF(F, LIUSHA) + '颗，门槛3颗）', '煞少': '煞少（本盘' + countSF(F, LIUSHA) + '颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌' }[a] || a;
+        '煞多': '煞多（本盘' + countSF(F, LIUSHA) + '颗，门槛3颗）', '煞少': '煞少（本盘' + countSF(F, LIUSHA) + '颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌', '化忌': '三方四正见化忌',
+        '庙旺': (F.star || '') + '庙旺', '陷': (F.star || '') + '落陷' }[a] || a;
     });
     return part.length ? part.join('，') : '通论';
   }
@@ -174,8 +197,15 @@
       if (r.cond.length < e.n) { e.topic = it.topic; e.n = r.cond.length; }
       e.rules.push(r);
     }
+    // 结论顺序：先按最早的无条件规则排（各盘通论顺序一致），再按最早出现的规则
+    const pos = new Map(hits.map((r, i) => [r, i]));
+    // 同一条规则里的几条结论按原文先后
+    const at = (r, t) => pos.get(r) * 1000 + Math.max(0, r.items.findIndex(it => canon(it.text) === t));
+    const key = e => { const g = e.rules.filter(r => !r.cond.length).map(r => at(r, e.text));
+      return [g.length ? Math.min(...g) : Infinity, Math.min(...e.rules.map(r => at(r, e.text)))]; };
+    const all = [...entries.values()].map(e => [key(e), e])
+      .sort((a, b) => a[0][0] - b[0][0] || a[0][1] - b[0][1]).map(x => x[1]);
     // 相反说法：就地标注在后出现的一方，不再另列
-    const all = [...entries.values()];
     for (const [a, b] of syn.opposed) {
       const ea = all.find(e => e.text === a), eb = all.find(e => e.text === b);
       if (ea && eb) eb.note = '（※与"' + a + '"说法相反）';
@@ -226,6 +256,7 @@
       }
       out.push({ topic, general, lines, paras });
     }
+    out.star = F.star || '紫微';
     return out;
   }
 
@@ -233,14 +264,14 @@
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 出处：有出处的短语下加虚线，点短语看出处；条件：每段前的"·"，点它看条件
   const tipAttr = tip => ' tabindex="0" role="button" data-tip="' + esc(tip) + '"';
-  function paraHTML(pa, hint) {
+  function paraHTML(pa, hint, star) {
     const body = pa.segs.map(sg => {
-      const extra = sg.items.filter(e => e.dup).length ? '；凡紫微坐命，通论亦有此说' : '';
+      const extra = sg.items.filter(e => e.dup).length ? '；凡' + star + '坐命，通论亦有此说' : '';
       const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
       return '<span class="rc-fold rc-src"' + tipAttr('出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
         sg.items.map(e => esc(e.text)).join('、') + '</span>';
     }).join('；');
-    const cond = '条件：' + (pa.general ? '凡紫微坐命皆是（通论）' : pa.cond) +
+    const cond = '条件：' + (pa.general ? '凡' + star + '坐命皆是（通论）' : pa.cond) +
       (hint && /百官|左辅、右弼/.test(pa.cond) ? '。' + hint : '');
     return '<p class="rc-para"><span class="rc-fold rc-cond"' + tipAttr(cond) + '>·</span>' + body + '。</p>';
   }
@@ -249,7 +280,7 @@
     const hint = (comp.find(t => t.topic === '提示') || { lines: [] }).lines[0];
     return comp.filter(t => t.paras && t.paras.length).map(t => {
       const ps = t.paras.filter(pa => opts.only === 'general' ? pa.general : opts.only === 'lines' ? !pa.general : true);
-      return ps.length ? '<div class="rc-topic"><h4>' + esc(t.topic) + '</h4>' + ps.map(pa => paraHTML(pa, hint)).join('') + '</div>' : '';
+      return ps.length ? '<div class="rc-topic"><h4>' + esc(t.topic) + '</h4>' + ps.map(pa => paraHTML(pa, hint, comp.star || '紫微')).join('') + '</div>' : '';
     }).join('');
   }
 

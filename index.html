@@ -2838,7 +2838,7 @@ function rule2Lookup(starName, palaceName, branchIdx) {
 
 // ===== 结构化解读（条件＋结论，只做措辞连接，不加书外内容）=====
 // 已结构化的星：命宫主星 → 规则表文件
-const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt' };
+const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt' };
 const _structCache = {};
 async function loadStructuredRules() {
   if (typeof RuleComposer === 'undefined') return;
@@ -2852,13 +2852,13 @@ function renderStructured(star) {
   const rules = _structCache[star];
   if (!rules || !_lastChartData) return null;
   const F = RuleComposer.extractFacts(_lastChartData);
-  const hits = RuleComposer.match(rules, F);
+  const hits = RuleComposer.match(rules, F, star);
   if (!hits.length) return null;
   const comp = RuleComposer.compose(hits, F, _structCache.__syn);
   const gen = RuleComposer.renderHTML(comp, { only: 'general' });
   const lines = RuleComposer.renderHTML(comp, { only: 'lines' });
   return '<div class="rc-box">' + lines +
-    (gen ? '<details class="rc-gen"><summary>凡紫微坐命都适用的通论</summary>' + gen + '</details>' : '') + '</div>';
+    (gen ? '<details class="rc-gen"><summary>凡' + star + '坐命都适用的通论</summary>' + gen + '</details>' : '') + '</div>';
 }
 // 点短语下的虚线看出处，点段首"·"看条件
 (function initRcTip() {
