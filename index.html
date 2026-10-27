@@ -2838,7 +2838,7 @@ function rule2Lookup(starName, palaceName, branchIdx) {
 
 // ===== 结构化解读（条件＋结论，只做措辞连接，不加书外内容）=====
 // 已结构化的星：命宫主星 → 规则表文件
-const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt' };
+const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt', '天梁': 'rules/structured/tianliang_minggong.txt' };
 const _structCache = {};
 async function loadStructuredRules() {
   if (typeof RuleComposer === 'undefined') return;
