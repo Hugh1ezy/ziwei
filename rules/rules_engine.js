@@ -677,7 +677,7 @@ function interpretPalace(ctx, palaceName, R) {
       }
       items.push({
         type: 'sihua',
-        text: `${st}化${hua}在${palaceName}：${rule.text}`,
+        text: `${st}化${hua}${(st === '天同' && hua === '忌') ? '（令东来认为庚年天相也化忌）' : ''}在${palaceName}：${rule.text}`,
         severity: rule.severity || 0,
         src: rule.src
       });

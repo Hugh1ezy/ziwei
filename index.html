@@ -10,6 +10,8 @@
 <script src="rules/rule2_data.js"></script>
 <!-- 规则推理引擎（编码自rules_jiedu.md，纯客户端无需API） -->
 <script src="rules/rules_engine.js"></script>
+<!-- 条件＋结论 结构化解读（试点：紫微在命宫），规则表见 rules/structured/ -->
+<script src="rules/structured/composer.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -350,6 +352,25 @@ button#calcBtn:hover { background: #b22222; }
 }
 .r2-tab:hover { background: #fdf0d8; }
 .r2-tab.active { background: #2d5016; color: #fff; border-color: #2d5016; }
+/* 结构化解读：只露结论；出处＝短语下虚线，条件＝段首"·" */
+.rc-box { font-size: 1.02em; line-height: 1.9; }
+.rc-topic h4 { font-size: 0.82em; font-weight: bold; letter-spacing: .2em; color: #8b1a1a; margin: 10px 0 2px; }
+.rc-para { margin: 0 0 8px; position: relative; padding-left: 1.1em; }
+.rc-fold { outline: none; border-radius: 2px; }
+.rc-src { text-decoration: underline dotted #9a9184; text-decoration-thickness: 1.5px; text-underline-offset: .32em; padding-bottom: .5em; }
+.rc-src.near, .rc-src.on, .rc-src:focus-visible { text-decoration-color: #8b1a1a; }
+.rc-para:has(.near) { cursor: pointer; }
+.rc-src.on { text-decoration-style: solid; }
+.rc-cond { position: absolute; left: 0; top: 0; width: 1.1em; font-weight: bold; cursor: pointer; }
+.rc-cond:hover, .rc-cond.on, .rc-cond:focus-visible { color: #8b1a1a; }
+#rc-tip { position: absolute; z-index: 1000; max-width: min(22rem, calc(100vw - 16px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.6; padding: 7px 10px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#rc-tip[hidden] { display: none; }
+.cs-note { color: #b8ad9c; cursor: pointer; padding: 0 2px; }
+.cs-note:hover, .cs-note:focus-visible { color: #8b1a1a; outline: none; }
+#cs-tip { position: absolute; z-index: 1000; max-width: min(22rem, calc(100vw - 16px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.6; padding: 7px 10px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#cs-tip[hidden] { display: none; }
+.rc-gen, .rc-raw { margin-top: 10px; font-size: 0.95em; }
+.rc-gen summary, .rc-raw summary { cursor: pointer; color: #7a746b; font-size: 0.9em; }
 #r2-content {
   font-size: 0.88em;
   line-height: 1.8;
@@ -778,6 +799,8 @@ function getMainStars(ziweiPos, tianfuPos) {
 }
 
 // ---- 四化（来源：rules_book1.md §5）----
+// 庚干天相化忌：用户定只加注、不改四化表（来源：《字令》令东来第十九章）
+const GENG_TIANXIANG_NOTE = '（令东来认为庚年天相也化忌）';
 const SIHUA = {
   '甲': {禄:'廉贞', 权:'破军', 科:'武曲', 忌:'太阳'},
   '乙': {禄:'天机', 权:'天梁', 科:'紫微', 忌:'太阴'},
@@ -1087,10 +1110,13 @@ function getBoshiStars(lusunPos, yearBrIdx, gender) {
 // 长生起始宫：金→巳(5)，木→亥(11)，火→寅(2)，水/土→申(8)
 const CHANGSHENG_START = { 2:8, 3:11, 4:5, 5:8, 6:2 };
 const CHANGSHENG_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
-function getChangshengStars(ju, gender) {
+// 顺逆论阴阳（用户定 2026-10-29）：阳男阴女顺、阴男阳女逆，依《内部讲义》第四课、《字全书0》第22页
+// 另说《精成》第24条、《全书》卷二"男顺女逆"，见盘上长生旁的说明标记
+function getChangshengStars(ju, gender, yearStemIdx) {
   const startBr = CHANGSHENG_START[ju];
+  const isYang = (yearStemIdx % 2 === 0);
   const isMale = (gender === 'male');
-  const dir = isMale ? 1 : -1; // 男顺(+1)女逆(-1)
+  const dir = (isYang === isMale) ? 1 : -1; // 阳男阴女顺(+1)，阴男阳女逆(-1)
   const result = {};
   for (let n = 0; n < 12; n++) {
     const br = ((startBr + dir * n) % 12 + 12) % 12;
@@ -1248,6 +1274,7 @@ function renderLiuYuePanel(year, liuNianBr, douJunBr) {
     `化权：<span style="color:#cc5500;font-weight:bold">${flowSihua['权']}</span> &nbsp;` +
     `化科：<span style="color:#0055aa;font-weight:bold">${flowSihua['科']}</span> &nbsp;` +
     `化忌：<span style="color:#cc0000;font-weight:bold">${flowSihua['忌']}</span>` +
+    (flowStem==='庚' ? `<span style="color:#888;font-size:0.85em">${GENG_TIANXIANG_NOTE}</span>` : '') +
     `</div>`;
   html += `<div class="limit-years">`;
   for (let m = 1; m <= 12; m++) {
@@ -1547,7 +1574,7 @@ function calculate() {
   const boshiStars = getBoshiStars(lusunPos, yearBrIdx, gender);
 
   // 23. 长生十二神（来源：rules_book1.md §20）
-  const changshengStars = getChangshengStars(ju, gender);
+  const changshengStars = getChangshengStars(ju, gender, yearStemIdx);
 
   // 24. 旬空（修正版，来源：rules_book1.md §21）
   const xunKong = getXunKong(yearStemIdx, yearBrIdx);
@@ -1724,7 +1751,9 @@ function updateBottomNavDaXian(n) {
   }
 }
 
+let _lastChartData = null; // 结构化解读用
 function renderChart(data) {
+  _lastChartData = data;
   const {
     y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
     yearStem,yearBr,ju,
@@ -1846,7 +1875,8 @@ function renderChart(data) {
     // 1. 顶行：长生十二神(左) + 天干地支(右)
     const topDiv = document.createElement('div');
     topDiv.className = 'palace-top';
-    topDiv.innerHTML = `<span class="palace-top-left">${changshengName}</span><span class="palace-top-right">${stemName}${brName}</span>`;
+    const csNote = changshengName === '长生' ? '<span class="cs-note" tabindex="0" role="button" aria-label="长生顺逆说明">·</span>' : '';
+    topDiv.innerHTML = `<span class="palace-top-left">${changshengName}${csNote}</span><span class="palace-top-right">${stemName}${brName}</span>`;
     div.appendChild(topDiv);
 
     // 2. 宫名（居中加粗）
@@ -1897,7 +1927,7 @@ function renderChart(data) {
     if (gsh) {
       const gshDiv = document.createElement('div');
       gshDiv.className = 'gonggan-sihua';
-      gshDiv.innerHTML = `<span class="gs-lu">${gsh.禄[0]}禄</span><span class="gs-quan">${gsh.权[0]}权</span><span class="gs-ke">${gsh.科[0]}科</span><span class="gs-ji">${gsh.忌[0]}忌</span>`;
+      gshDiv.innerHTML = `<span class="gs-lu">${gsh.禄[0]}禄</span><span class="gs-quan">${gsh.权[0]}权</span><span class="gs-ke">${gsh.科[0]}科</span><span class="gs-ji"${stemName==='庚'?` title="${GENG_TIANXIANG_NOTE}"`:''}>${gsh.忌[0]}忌</span>`;
       div.appendChild(gshDiv);
     }
 
@@ -1975,7 +2005,7 @@ function renderChart(data) {
       化禄：<span class="star-hua-lu">${sihua['禄']}</span><br>
       化权：<span class="star-hua-quan">${sihua['权']}</span><br>
       化科：<span class="star-hua-ke">${sihua['科']}</span>${SIHUA_CONFLICTS[yearStem]?.type==='科'?`<span style="color:#888;font-size:0.85em">（一说${SIHUA_CONFLICTS[yearStem].alts[0].star}，${SIHUA_CONFLICTS[yearStem].alts[0].src}）</span>`:''}<br>
-      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${SIHUA_CONFLICTS[yearStem]?.type==='忌'?`<span style="color:#888;font-size:0.85em">（一说${SIHUA_CONFLICTS[yearStem].alts[0].star}，${SIHUA_CONFLICTS[yearStem].alts[0].src}）</span>`:''}
+      化忌：<span class="star-hua-ji">${sihua['忌']}</span>${yearStem==='庚'?`<span style="color:#888;font-size:0.85em">${GENG_TIANXIANG_NOTE}</span>`:''}${SIHUA_CONFLICTS[yearStem]?.type==='忌'?`<span style="color:#888;font-size:0.85em">（一说${SIHUA_CONFLICTS[yearStem].alts[0].star}，${SIHUA_CONFLICTS[yearStem].alts[0].src}）</span>`:''}
     </div>
   </div>`;
   grid.appendChild(center);
@@ -2561,8 +2591,33 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   const paragraphs = []; // [{context, sentences}]
   let currentPara = { context: null, sentences: [] };
 
+  const reGenderHead = /^[\s▲◇△☆“"]*(?:[一-鿿]{2,3}?(?:星)?)?(?:入)?(女|男)(?:命|性)/;
   for (const sentence of sentences) {
     if (!sentence.trim()) continue;
+
+    // 性别段落头："▲紫微女命……""紫微入男命吉凶诀""女命，……"；▲开头的新段落结束上一个性别段落
+    const gm = sentence.match(reGenderHead);
+    if (gm) {
+      const gctx = { type: 'gender', gender: gm[1] === '女' ? 'female' : 'male' };
+      const inGender = currentPara.context && currentPara.context.type === 'gender';
+      if (/^\s*▲/.test(sentence) || /命吉凶诀/.test(sentence)) {
+        // 成段的男命/女命论述：直到下一个▲或下一个吉凶诀为止
+        if (currentPara.sentences.length > 0) paragraphs.push(currentPara);
+        currentPara = { context: gctx, sentences: [sentence] };
+      } else {
+        // 单句"女命，……"：只管这一句，之后回到原段落
+        const prevCtx = inGender ? null : currentPara.context;
+        if (currentPara.sentences.length > 0) paragraphs.push(currentPara);
+        paragraphs.push({ context: gctx, sentences: [sentence] });
+        currentPara = { context: prevCtx, sentences: [] };
+      }
+      continue;
+    }
+    if ((/^\s*▲/.test(sentence) || /吉凶诀/.test(sentence)) && currentPara.context && currentPara.context.type === 'gender') {
+      paragraphs.push(currentPara);
+      currentPara = { context: null, sentences: [sentence] };
+      continue;
+    }
 
     // 检测星组合段落头
     const comboStars = detectStarComboHeader(sentence);
@@ -2599,6 +2654,10 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
   for (const para of paragraphs) {
     // 检查段落级别的条件
     if (para.context) {
+      if (para.context.type === 'gender') {
+        // 性别段落：与命主性别不符则整段跳过
+        if (ctx.gender && para.context.gender !== ctx.gender) continue;
+      }
       if (para.context.type === 'combo') {
         // 星组合段落：检查本宫是否有这些主星
         const needed = para.context.stars;
@@ -2654,7 +2713,13 @@ function filterRuleText(text, branchIdx, stars, currentStar) {
     }
   }
 
-  return result.join('');
+  // 句中"，女命……"/"，男命……"分句：与命主性别不符的删去（到下一个；或。为止）
+  let joinedAll = result.join('');
+  if (ctx.gender) {
+    const other = ctx.gender === 'male' ? '女' : '男';
+    joinedAll = joinedAll.replace(new RegExp('[，,]\\s*' + other + '命[^；。]*', 'g'), '');
+  }
+  return joinedAll;
 }
 
 // 条件句注释：在"加吉"/"加煞"等条件关键词后插入具体星名
@@ -2767,7 +2832,9 @@ function rule2Lookup(starName, palaceName, branchIdx) {
   if (palaceName === '命宫') {
     const data = RULE2_MINGONG[starKey];
     if (!data) return null;
-    return data.branches?.[branch] || data.general || null;
+    // 通论（星性、容貌、性情、组合喜忌、四化、男女命）＋本地支专论，一并交给条件过滤
+    const parts = [data.general, data.branches?.[branch]].filter(Boolean);
+    return parts.length ? parts.join(' ') : null;
   } else {
     const palaceKey = PALACE_SUFFIX_MAP[palaceName] || (palaceName + '宫');
     const palaceData = RULE2_OTHER[palaceKey];
@@ -2775,6 +2842,56 @@ function rule2Lookup(starName, palaceName, branchIdx) {
     return palaceData[starKey] || null;
   }
 }
+
+
+// ===== 结构化解读（条件＋结论，只做措辞连接，不加书外内容）=====
+// 已结构化的星：命宫主星 → 规则表文件
+const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt', '天梁': 'rules/structured/tianliang_minggong.txt', '太阳': 'rules/structured/taiyang_minggong.txt', '武曲': 'rules/structured/wuqu_minggong.txt', '天同': 'rules/structured/tiantong_minggong.txt' };
+const _structCache = {};
+async function loadStructuredRules() {
+  if (typeof RuleComposer === 'undefined') return;
+  try {
+    if (!_structCache.__syn) _structCache.__syn = RuleComposer.parseSynonyms(await (await fetch('rules/structured/synonyms.txt')).text());
+    for (const [star, url] of Object.entries(STRUCTURED_RULES))
+      if (!_structCache[star]) _structCache[star] = RuleComposer.parseRules(await (await fetch(url)).text());
+  } catch (e) { console.warn('结构化规则加载失败:', e); }
+}
+function renderStructured(star) {
+  const rules = _structCache[star];
+  if (!rules || !_lastChartData) return null;
+  const F = RuleComposer.extractFacts(_lastChartData);
+  const hits = RuleComposer.match(rules, F, star);
+  if (!hits.length) return null;
+  const comp = RuleComposer.compose(hits, F, _structCache.__syn);
+  const gen = RuleComposer.renderHTML(comp, { only: 'general' });
+  const lines = RuleComposer.renderHTML(comp, { only: 'lines' });
+  return '<div class="rc-box">' + lines +
+    (gen ? '<details class="rc-gen"><summary>凡' + star + '坐命都适用的通论</summary>' + gen + '</details>' : '') + '</div>';
+}
+// 点短语下的虚线看出处，点段首"·"看条件
+(function initRcTip() {
+  let tip = null, cur = null;
+  const onLine = (el, e) => { const em = parseFloat(getComputedStyle(el).fontSize);
+    for (const r of el.getClientRects()) if (e.clientX >= r.left - 2 && e.clientX <= r.right + 2 && e.clientY <= r.bottom && e.clientY >= r.bottom - 0.6 * em) return true;
+    return false; };
+  const lineAt = e => { const pa = e.target.closest && e.target.closest('.rc-para'); if (!pa) return null;
+    for (const x of pa.querySelectorAll('.rc-src')) if (onLine(x, e)) return x; return null; };
+  const hide = () => { if (cur) cur.classList.remove('on'); cur = null; if (tip) tip.hidden = true; };
+  const show = el => {
+    if (cur === el) { hide(); return; } hide(); cur = el; el.classList.add('on');
+    if (!tip) { tip = document.createElement('div'); tip.id = 'rc-tip'; document.body.appendChild(tip); }
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth;
+    const x = Math.max(8, Math.min(r.left + scrollX - 8, document.documentElement.clientWidth - w - 8));
+    tip.style.left = x + 'px'; tip.style.top = (r.bottom + scrollY + 6) + 'px';
+  };
+  document.addEventListener('mousemove', e => { const f = lineAt(e);
+    document.querySelectorAll('.rc-src.near').forEach(x => { if (x !== f) x.classList.remove('near'); }); if (f) f.classList.add('near'); });
+  document.addEventListener('click', e => { const f = (e.target.closest && e.target.closest('.rc-cond')) || lineAt(e);
+    if (f) { e.stopPropagation(); show(f); } else if (!(e.target.closest && e.target.closest('#rc-tip'))) hide(); });
+  document.addEventListener('keydown', e => { const f = e.target.closest && e.target.closest('.rc-fold[data-tip]');
+    if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(f); } if (e.key === 'Escape') hide(); });
+})();
 
 // 生成单个宫的解读 HTML
 function renderRule2Palace(branchIdx) {
@@ -2844,7 +2961,16 @@ function renderRule2Palace(branchIdx) {
 
     let sec = `<div class="r2-section${oppCls}">`;
     const jiShaSuffix = jiShaHtml ? ` —— ${jiShaHtml}` : '';
-    sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${mwLabel}${jiShaSuffix}</div>`;
+    const gengNote = (star === '天同' && huaType === '忌') ? `<span style="color:#888;font-size:0.8em">${GENG_TIANXIANG_NOTE}</span>` : '';
+    sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${gengNote}${mwLabel}${jiShaSuffix}</div>`;
+    const structured = (palaceName === '命宫' && !isOpp && STRUCTURED_RULES[star]) ? renderStructured(star) : null;
+    if (structured) {
+      // 已结构化：只显示本盘成立的结论；原书全文收起备查
+      const raw = text ? formatText(typeof filterRuleText === 'function' ? filterRuleText(text, targetBrIdx, stars, star) : text) : '';
+      sec += structured + (raw ? `<details class="rc-raw"><summary>原书全文（精成，备查）</summary><div class="r2-text">${raw}</div></details>` : '');
+      sec += `</div>`;
+      return sec;
+    }
     if (text) {
       // 恢复：按宫位/庙陷/吉煞过滤文本 + 吉煞条件标注
       if (typeof filterRuleText === 'function') {
@@ -2853,6 +2979,7 @@ function renderRule2Palace(branchIdx) {
       if (typeof annotateStarConditions === 'function') {
         text = annotateStarConditions(text, targetBrIdx, stars);
       }
+      text = text.replace(/天同化忌(?!（令东来)/g, '天同化忌' + GENG_TIANXIANG_NOTE);
       const formatted = formatText(text);
       if (formatted.length > 800) {
         const uid = `r2exp_${targetBrIdx}_${Array.from(star).map(c=>c.charCodeAt(0).toString(36)).join('')}`;
@@ -2915,6 +3042,7 @@ async function toggleRule2Panel() {
         injectEngineStyles();
       }
     }
+    await loadStructuredRules();
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -3220,6 +3348,7 @@ function heluoPaiOneway(srcChart, destChart, srcLabel, destLabel) {
       }
     }
 
+    if (huaType === '忌' && srcStem === '庚') verdict += GENG_TIANXIANG_NOTE;
     cards.push({ huaType, starName, palaceName, line, verdict, verdictClass });
   }
 
@@ -3435,6 +3564,30 @@ function runHehun() {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+
+// 长生顺逆说明标记：点"·"弹出，点别处收起
+(function () {
+  const TEXT = '长生十二神顺逆：本盘按阳男阴女顺行、阴男阳女逆行（年干分阴阳）。依据《内部讲义》第四课（长生随大限方向）、《字全书0》第22页（阳男阴女顺行）。另说：《精成》第24条、《全书》卷二作“男顺女逆”。两书安小限时明言“不论阴阳”，安长生时未言，故从论阴阳。';
+  let tip = null;
+  const hide = () => { if (tip) tip.hidden = true; };
+  const show = (el) => {
+    if (!tip) { tip = document.createElement('div'); tip.id = 'cs-tip'; document.body.appendChild(tip); }
+    tip.textContent = TEXT; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth;
+    tip.style.left = Math.max(8, Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - w - 8)) + 'px';
+    tip.style.top = (r.bottom + window.scrollY + 4) + 'px';
+  };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest && e.target.closest('.cs-note');
+    if (el) { e.stopPropagation(); (tip && !tip.hidden) ? hide() : show(el); }
+    else if (!(e.target.closest && e.target.closest('#cs-tip'))) hide();
+  });
+  document.addEventListener('keydown', (e) => {
+    const el = e.target.closest && e.target.closest('.cs-note');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(el); }
+    else if (e.key === 'Escape') hide();
+  });
+})();
 </script>
 </body>
 </html>
