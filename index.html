@@ -365,6 +365,10 @@ button#calcBtn:hover { background: #b22222; }
 .rc-cond:hover, .rc-cond.on, .rc-cond:focus-visible { color: #8b1a1a; }
 #rc-tip { position: absolute; z-index: 1000; max-width: min(22rem, calc(100vw - 16px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.6; padding: 7px 10px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #rc-tip[hidden] { display: none; }
+.cs-note { color: #b8ad9c; cursor: pointer; padding: 0 2px; }
+.cs-note:hover, .cs-note:focus-visible { color: #8b1a1a; outline: none; }
+#cs-tip { position: absolute; z-index: 1000; max-width: min(22rem, calc(100vw - 16px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.6; padding: 7px 10px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#cs-tip[hidden] { display: none; }
 .rc-gen, .rc-raw { margin-top: 10px; font-size: 0.95em; }
 .rc-gen summary, .rc-raw summary { cursor: pointer; color: #7a746b; font-size: 0.9em; }
 #r2-content {
@@ -1106,10 +1110,13 @@ function getBoshiStars(lusunPos, yearBrIdx, gender) {
 // 长生起始宫：金→巳(5)，木→亥(11)，火→寅(2)，水/土→申(8)
 const CHANGSHENG_START = { 2:8, 3:11, 4:5, 5:8, 6:2 };
 const CHANGSHENG_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
-function getChangshengStars(ju, gender) {
+// 顺逆论阴阳（用户定 2026-10-29）：阳男阴女顺、阴男阳女逆，依《内部讲义》第四课、《字全书0》第22页
+// 另说《精成》第24条、《全书》卷二"男顺女逆"，见盘上长生旁的说明标记
+function getChangshengStars(ju, gender, yearStemIdx) {
   const startBr = CHANGSHENG_START[ju];
+  const isYang = (yearStemIdx % 2 === 0);
   const isMale = (gender === 'male');
-  const dir = isMale ? 1 : -1; // 男顺(+1)女逆(-1)
+  const dir = (isYang === isMale) ? 1 : -1; // 阳男阴女顺(+1)，阴男阳女逆(-1)
   const result = {};
   for (let n = 0; n < 12; n++) {
     const br = ((startBr + dir * n) % 12 + 12) % 12;
@@ -1567,7 +1574,7 @@ function calculate() {
   const boshiStars = getBoshiStars(lusunPos, yearBrIdx, gender);
 
   // 23. 长生十二神（来源：rules_book1.md §20）
-  const changshengStars = getChangshengStars(ju, gender);
+  const changshengStars = getChangshengStars(ju, gender, yearStemIdx);
 
   // 24. 旬空（修正版，来源：rules_book1.md §21）
   const xunKong = getXunKong(yearStemIdx, yearBrIdx);
@@ -1868,7 +1875,8 @@ function renderChart(data) {
     // 1. 顶行：长生十二神(左) + 天干地支(右)
     const topDiv = document.createElement('div');
     topDiv.className = 'palace-top';
-    topDiv.innerHTML = `<span class="palace-top-left">${changshengName}</span><span class="palace-top-right">${stemName}${brName}</span>`;
+    const csNote = changshengName === '长生' ? '<span class="cs-note" tabindex="0" role="button" aria-label="长生顺逆说明">·</span>' : '';
+    topDiv.innerHTML = `<span class="palace-top-left">${changshengName}${csNote}</span><span class="palace-top-right">${stemName}${brName}</span>`;
     div.appendChild(topDiv);
 
     // 2. 宫名（居中加粗）
@@ -3556,6 +3564,30 @@ function runHehun() {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+
+// 长生顺逆说明标记：点"·"弹出，点别处收起
+(function () {
+  const TEXT = '长生十二神顺逆：本盘按阳男阴女顺行、阴男阳女逆行（年干分阴阳）。依据《内部讲义》第四课（长生随大限方向）、《字全书0》第22页（阳男阴女顺行）。另说：《精成》第24条、《全书》卷二作“男顺女逆”。两书安小限时明言“不论阴阳”，安长生时未言，故从论阴阳。';
+  let tip = null;
+  const hide = () => { if (tip) tip.hidden = true; };
+  const show = (el) => {
+    if (!tip) { tip = document.createElement('div'); tip.id = 'cs-tip'; document.body.appendChild(tip); }
+    tip.textContent = TEXT; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth;
+    tip.style.left = Math.max(8, Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - w - 8)) + 'px';
+    tip.style.top = (r.bottom + window.scrollY + 4) + 'px';
+  };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest && e.target.closest('.cs-note');
+    if (el) { e.stopPropagation(); (tip && !tip.hidden) ? hide() : show(el); }
+    else if (!(e.target.closest && e.target.closest('#cs-tip'))) hide();
+  });
+  document.addEventListener('keydown', (e) => {
+    const el = e.target.closest && e.target.closest('.cs-note');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(el); }
+    else if (e.key === 'Escape') hide();
+  });
+})();
 </script>
 </body>
 </html>
