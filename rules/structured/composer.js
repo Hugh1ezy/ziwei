@@ -89,6 +89,7 @@
       ju: data.ju, shen: data.shenGongBrIdx,
       sihua: data.sihua || {},
       hour: data.hourBrIdx,
+      nayin: (data.baZi && data.baZi.yearNaYin) || '', // 年柱纳音，如"涧下水"
     };
   }
 
@@ -104,6 +105,8 @@
     if ((mm = atom.match(/^支年=(.+)$/))) return mm[1].split('/').includes(F.yearBr);
     if ((mm = atom.match(/^性别=(.+)$/))) return mm[1] === F.gender;
     if ((mm = atom.match(/^局=(.+)$/)))   return mm[1].split('/').map(Number).includes(F.ju);
+    // 精成："水命人（年柱纳音）"——按年柱纳音五行，不是五行局
+    if ((mm = atom.match(/^纳音=(.+)$/))) return !!F.nayin && mm[1].split('/').includes(F.nayin.slice(-1));
     if ((mm = atom.match(/^长生=(.+)$/))) return mm[1].split('/').some(s => F.at(F.ming).includes(s));
     if ((mm = atom.match(/^同宫:(.+)$/))) return expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming], s));
     if ((mm = atom.match(/^同宫全:(.+)$/))) return expand(mm[1].split('/')).every(s => inPalaces(F, [F.ming], s));
@@ -186,6 +189,7 @@
       if (/^支年=/.test(a)) return F.yearBr + '年生';
       if ((m = a.match(/^性别=(.+)/))) return m[1] + '命';
       if (/^局=/.test(a))   return JU_NAME[F.ju];
+      if (/^纳音=/.test(a)) return '年柱纳音' + F.nayin;
       if (/^长生=/.test(a)) return '命宫逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
       if ((m = a.match(/^同宫全:(.+)/))) return list(m[1]) + '同宫';
       if (/^时=/.test(a))   return BR[F.hour] + '时生';
