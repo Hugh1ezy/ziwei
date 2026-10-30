@@ -96,6 +96,7 @@
       sihua: data.sihua || {},
       hour: data.hourBrIdx,
       nayin: (data.baZi && data.baZi.yearNaYin) || '', // 年柱纳音，如"涧下水"
+      lday: data.lunarDay, lmonth: data.lunarMonth, leap: !!data.lunarLeap, // 农历日、月（太阴上弦下弦等）
     };
   }
 
@@ -119,6 +120,11 @@
     if ((mm = atom.match(/^不同宫:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming], s));
     if ((mm = atom.match(/^同宫全:(.+)$/))) return expand(mm[1].split('/')).every(s => inPalaces(F, [F.ming], s));
     if ((mm = atom.match(/^时=(.+)$/)))   return mm[1].split('/').includes(BR[F.hour]);
+    // 农历生日：日=15、日=1-15（含两端）；月=8 不含闰月（太阴"十五月圆""中秋""上弦下弦"）
+    if ((mm = atom.match(/^日=(.+)$/)))   return mm[1].split('/').some(x => { const [a, b] = x.split('-').map(Number); return F.lday >= a && F.lday <= (b || a); });
+    if ((mm = atom.match(/^月=(.+)$/)))   return !F.leap && mm[1].split('/').map(Number).includes(F.lmonth);
+    // 命宫、迁移宫都没有所列之星（精成英星入庙"命迁线无七煞星"）
+    if ((mm = atom.match(/^命迁无:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming, F.sf[3]], s));
     if ((mm = atom.match(/^会:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^不会:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^夹:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.jia, s));
@@ -157,6 +163,7 @@
       // 用户定：左右、昌曲、魁钺三组各见至少一颗
       case '君臣庆会':
         return [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']].every(g => g.some(s => inPalaces(F, F.sf, s)));
+      case '命迁无化忌': return !(F.sihua['忌'] && inPalaces(F, [F.ming, F.sf[3]], F.sihua['忌']));
       case '无化忌': return !(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
       case '化忌':   return !!(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
       case '庙旺': case '陷': return !!(MIAO[F.star] && MIAO[F.star][atom].includes(F.branch));
@@ -203,6 +210,9 @@
       if (/^长生=/.test(a)) return '命宫逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
       if ((m = a.match(/^同宫全:(.+)/))) return list(m[1]) + '同宫';
       if (/^时=/.test(a))   return BR[F.hour] + '时生';
+      if (/^日=/.test(a))   return '农历' + F.lday + '日生';
+      if (/^月=/.test(a))   return '农历' + F.lmonth + '月生';
+      if ((m = a.match(/^命迁无:(.+)/))) return '命宫、迁移宫无' + list(m[1]);
       if ((m = a.match(/^不同宫:(.+)/))) return '命宫无' + list(m[1]);
       if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
       if ((m = a.match(/^会:(.+)/)))   return '三方四正见' + present(m[1].split('/'));
@@ -225,7 +235,7 @@
       return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
         '无吉': '三方四正无六吉', '煞': '三方四正见四煞', '无煞': '三方四正无四煞', '四煞并见': '羊陀与火铃并见',
         '三奇': '科权禄三方会齐', '吉多': '吉多（本盘' + jiCount(F) + '颗，门槛4颗）',
-        '煞多': '煞多（本盘' + countSF(F, LIUSHA) + '颗，门槛3颗）', '煞少': '煞少（本盘' + countSF(F, LIUSHA) + '颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': (F.star || '') + '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌', '化忌': '三方四正见化忌',
+        '煞多': '煞多（本盘' + countSF(F, LIUSHA) + '颗，门槛3颗）', '煞少': '煞少（本盘' + countSF(F, LIUSHA) + '颗）', '君臣庆会': '君臣庆会（左右、昌曲、魁钺各见一颗以上）', '入庙': (F.star || '') + '入庙', '禄马交驰': '禄马交驰', '无化忌': '三方四正无化忌', '命迁无化忌': '命宫、迁移宫无化忌', '化忌': '三方四正见化忌',
         '庙旺': (F.star || '') + '庙旺', '陷': (F.star || '') + '落陷',
         '日生': '日生人（' + BR[F.hour] + '时）', '夜生': '夜生人（' + BR[F.hour] + '时）' }[a] || a;
     });
