@@ -47,6 +47,8 @@
     '天相': { '入庙': ['子','丑','寅','申'], '庙旺': ['子','丑','寅','申'], '陷': ['卯','酉'] },
     // 七杀：程序庙旺表（精成§27）丑寅未申戌庙、子卯午酉旺、辰得、巳亥平、无陷；全书卷三"庙辰戌丑未寅申 旺子午卯酉 平巳亥 无陷"，辰宫不同；令东来以卯酉为陷，写成 支=
     '七杀': { '入庙': ['丑','寅','未','申','戌'], '庙旺': ['子','丑','寅','卯','午','未','申','酉','戌'], '陷': [] },
+    // 破军：程序庙旺表（精成§27）子午庙、丑辰未戌旺、寅申得、巳亥平、卯酉陷；全书卷三"庙子午 旺辰戌丑未 陷卯酉"相同；令东来寅申为陷、未为庙，写成 支=
+    '破军': { '入庙': ['子','午'], '庙旺': ['子','丑','辰','午','未','戌'], '陷': ['卯','酉'] },
   };
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
@@ -113,6 +115,8 @@
     if ((mm = atom.match(/^纳音=(.+)$/))) return !!F.nayin && mm[1].split('/').includes(F.nayin.slice(-1));
     if ((mm = atom.match(/^长生=(.+)$/))) return mm[1].split('/').some(s => F.at(F.ming).includes(s));
     if ((mm = atom.match(/^同宫:(.+)$/))) return expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming], s));
+    // 命宫没有所列之星（精成英星入庙"无文曲同宫来破格"）
+    if ((mm = atom.match(/^不同宫:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming], s));
     if ((mm = atom.match(/^同宫全:(.+)$/))) return expand(mm[1].split('/')).every(s => inPalaces(F, [F.ming], s));
     if ((mm = atom.match(/^时=(.+)$/)))   return mm[1].split('/').includes(BR[F.hour]);
     if ((mm = atom.match(/^会:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
@@ -199,6 +203,7 @@
       if (/^长生=/.test(a)) return '命宫逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
       if ((m = a.match(/^同宫全:(.+)/))) return list(m[1]) + '同宫';
       if (/^时=/.test(a))   return BR[F.hour] + '时生';
+      if ((m = a.match(/^不同宫:(.+)/))) return '命宫无' + list(m[1]);
       if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
       if ((m = a.match(/^会:(.+)/)))   return '三方四正见' + present(m[1].split('/'));
       if ((m = a.match(/^不会:(.+)/))) return '三方四正无' + list(m[1]);
