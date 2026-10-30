@@ -4,6 +4,7 @@
 |---|---|
 | `taiyang_minggong.txt` | 太阳在命宫规则表：1481 条（其中 91 条为天梁表里只限卯酉的阳梁同宫规则，原样搬入） |
 | `wuqu_minggong.txt` | 武曲在命宫规则表：988 条 |
+| `tianfu_minggong.txt` | 天府在命宫规则表：526 条（编号 F）；紫府、武府、廉府另见紫微、武曲、廉贞表 |
 | `lianzhen_minggong.txt` | 廉贞在命宫规则表：1196 条（编号 C） |
 | `tiantong_minggong.txt` | 天同在命宫规则表：1017 条（寅申同梁 100 条照搬天梁表） |
 | `tianliang_minggong.txt` | 天梁在命宫规则表：1035 条（其中 98 条为天机表里只限辰戌的机梁同宫规则，原样搬入） |
@@ -19,4 +20,4 @@
 | `示例输出_天机.md` | 天机在命宫：通论一次＋三张命盘＋12 盘自检 |
 | `check_data.js` | 自查 rule2_data.js 有无截断条目：`node rules/structured/check_data.js` |
 
-已接入网页：index.html 的 STRUCTURED_RULES 列出已上线的星（紫微、天机、天梁、太阳、武曲、天同、廉贞）。
+已接入网页：index.html 的 STRUCTURED_RULES 列出已上线的星（紫微、天机、天梁、太阳、武曲、天同、廉贞、天府）。

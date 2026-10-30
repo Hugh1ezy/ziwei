@@ -35,6 +35,8 @@
     '天同': { '入庙': ['卯','巳','亥'], '庙旺': ['子','卯','巳','申','亥'], '陷': ['午'] },
     // 廉贞：程序庙旺表（精成§27）寅申庙、巳亥陷；全书卷三"庙寅申 利辰戌丑未 陷巳亥"，相同
     '廉贞': { '入庙': ['寅','申'], '庙旺': ['寅','申'], '陷': ['巳','亥'] },
+    // 天府：程序庙旺表（精成§27）子丑寅未庙、辰午酉戌旺、无陷；全书卷三"庙子丑未寅辰戌 旺午酉 无陷"，辰戌不同
+    '天府': { '入庙': ['子','丑','寅','未'], '庙旺': ['子','丑','寅','辰','午','未','酉','戌'], '陷': [] },
   };
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
@@ -119,8 +121,8 @@
     if ((mm = atom.match(/^不会化:(.+)$/))) return !mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     switch (atom) {
-      case '百官':   return Object.values(PAIRS).some(p => pairOK(F, p));
-      case '非百官': return !Object.values(PAIRS).some(p => pairOK(F, p));
+      case '百官':   return guanPairs(F).some(p => pairOK(F, p));
+      case '非百官': return !guanPairs(F).some(p => pairOK(F, p));
       case '吉':     return LIUJI.some(s => inPalaces(F, F.sf, s));
       case '无吉':   return !LIUJI.some(s => inPalaces(F, F.sf, s));
       case '煞':     return SISHA.some(s => inPalaces(F, F.sf, s));
@@ -150,6 +152,8 @@
     }
     throw new Error('未知条件：' + atom);
   }
+  // 百官的对星；天府坐命必会天相，天府不算自己的百官，故不计"府相"
+  const guanPairs = F => Object.values(PAIRS).filter(p => !(F.star === '天府' && p.includes('天府')));
   // 对星：两颗都在三方四正或左右邻宫（精成"守照会拱或在左右邻宫相夹"）
   function pairOK(F, [a, b]) {
     const idx = [...F.sf, ...F.jia];
