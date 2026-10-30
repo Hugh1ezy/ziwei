@@ -43,6 +43,8 @@
     '贪狼': { '入庙': ['丑','辰','未','戌'], '庙旺': ['子','丑','辰','午','未','戌'], '陷': ['巳','亥'] },
     // 巨门：程序庙旺表（精成§27）寅卯申酉庙、子午亥旺、无陷；全书卷三"庙寅申卯酉 旺子午巳亥 陷辰戌"，巳宫不同；书说的陷地在规则表里写成 支=辰/戌
     '巨门': { '入庙': ['寅','卯','申','酉'], '庙旺': ['子','寅','卯','午','申','酉','亥'], '陷': [] },
+    // 天相：程序庙旺表（精成§27）子丑寅申庙、卯酉陷，午未巳亥戌得地，辰平；全书卷三"庙子午丑寅申 地辰戌巳亥未 陷卯酉"，午宫不同
+    '天相': { '入庙': ['子','丑','寅','申'], '庙旺': ['子','丑','寅','申'], '陷': ['卯','酉'] },
   };
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
@@ -129,6 +131,8 @@
     if ((mm = atom.match(/^同宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h]));
     if ((mm = atom.match(/^不会化:(.+)$/))) return !mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
+    // 邻宫有生年化X之星（天相"财荫夹印""刑忌夹印"）
+    if ((mm = atom.match(/^夹化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.jia, F.sihua[h]));
     switch (atom) {
       case '百官':   return guanPairs(F).some(p => pairOK(F, p));
       case '非百官': return !guanPairs(F).some(p => pairOK(F, p));
@@ -161,8 +165,8 @@
     }
     throw new Error('未知条件：' + atom);
   }
-  // 百官的对星；天府坐命必会天相，天府不算自己的百官，故不计"府相"
-  const guanPairs = F => Object.values(PAIRS).filter(p => !(F.star === '天府' && p.includes('天府')));
+  // 百官的对星；天府坐命必会天相（天相坐命必会天府），不算自己的百官，故不计"府相"
+  const guanPairs = F => Object.values(PAIRS).filter(p => !((F.star === '天府' || F.star === '天相') && p.includes('天府')));
   // 对星：两颗都在三方四正或左右邻宫（精成"守照会拱或在左右邻宫相夹"）
   function pairOK(F, [a, b]) {
     const idx = [...F.sf, ...F.jia];
@@ -208,6 +212,7 @@
       if ((m = a.match(/^同宫化:(.+)/))) return '命宫有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if ((m = a.match(/^不会化:(.+)/))) return '三方四正无化' + m[1].split('/').join('、');
       if ((m = a.match(/^会化:(.+)/)))   return '三方四正见' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
+      if ((m = a.match(/^夹化:(.+)/)))   return '邻宫有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.jia, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if (a === '吉') return '三方四正见' + present(LIUJI);
       if (a === '煞') return '三方四正见' + present(SISHA);
       return { '百官': '得百官朝拱（精成定义）', '非百官': '无百官朝拱（精成定义）', '吉': '三方四正见六吉',
