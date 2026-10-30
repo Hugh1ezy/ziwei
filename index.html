@@ -2846,7 +2846,7 @@ function rule2Lookup(starName, palaceName, branchIdx) {
 
 // ===== 结构化解读（条件＋结论，只做措辞连接，不加书外内容）=====
 // 已结构化的星：命宫主星 → 规则表文件
-const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt', '天梁': 'rules/structured/tianliang_minggong.txt', '太阳': 'rules/structured/taiyang_minggong.txt', '武曲': 'rules/structured/wuqu_minggong.txt', '天同': 'rules/structured/tiantong_minggong.txt', '廉贞': 'rules/structured/lianzhen_minggong.txt', '天府': 'rules/structured/tianfu_minggong.txt', '太阴': 'rules/structured/taiyin_minggong.txt', '贪狼': 'rules/structured/tanlang_minggong.txt', '巨门': 'rules/structured/jumen_minggong.txt', '天相': 'rules/structured/tianxiang_minggong.txt', '七杀': 'rules/structured/qisha_minggong.txt' };
+const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt', '天梁': 'rules/structured/tianliang_minggong.txt', '太阳': 'rules/structured/taiyang_minggong.txt', '武曲': 'rules/structured/wuqu_minggong.txt', '天同': 'rules/structured/tiantong_minggong.txt', '廉贞': 'rules/structured/lianzhen_minggong.txt', '天府': 'rules/structured/tianfu_minggong.txt', '太阴': 'rules/structured/taiyin_minggong.txt', '贪狼': 'rules/structured/tanlang_minggong.txt', '巨门': 'rules/structured/jumen_minggong.txt', '天相': 'rules/structured/tianxiang_minggong.txt', '七杀': 'rules/structured/qisha_minggong.txt', '破军': 'rules/structured/pojun_minggong.txt' };
 const _structCache = {};
 async function loadStructuredRules() {
   if (typeof RuleComposer === 'undefined') return;
