@@ -596,7 +596,7 @@ function interpretPalace(ctx, palaceName, R) {
         }
       }
       // 规则4：本宫主星失陷+三方煞凑→大凶（rules_jingcheng_compact.md:155）
-      // 精成155只分“庙旺得地”与“失陷”，平地不算失陷：只取陷、不得地（亮度≤1）
+      // 《紫微斗数精成》（jingcheng155）只分“庙旺得地”与“失陷”，平地不算失陷：只取陷、不得地（亮度≤1）
       else if (localAvg <= 1 && sfShaCount >= 3) {
         sfComment = `三方四正综合：${palLabel}主星失陷，三方四正又有${sfShaCount}颗煞星凑聚${sfHasJi ? '（含化忌）' : ''}——本宫事务凶多吉少，须格外注意防范。`;
         items.push({ type: 'sanfang_bright', text: sfComment, severity: 2, src: '§三方四正综合/jingcheng155' });
@@ -778,7 +778,7 @@ function matchGeju(ctx, R) {
     }
 
     if (c.same_palace) {
-      // 确定搜索范围：默认只看命宫（格局指守命，如字陆"廉贞在未宫守命…雄宿乾元格"）；
+      // 确定搜索范围：默认只看命宫（格局指守命，如《陆斌兆紫微斗数斗数讲义评注》"廉贞在未宫守命…雄宿乾元格"）；
       // in_sanfang=true 看命宫三方四正；anywhere=true（限运类，书未限宫位）才搜全盘
       let searchBrs = [ctx.mingBr];
       if (c.anywhere) searchBrs = Array.from({length:12}, (_,i) => i);
