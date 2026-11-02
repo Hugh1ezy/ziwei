@@ -820,7 +820,7 @@ function getMainStars(ziweiPos, tianfuPos) {
 }
 
 // ---- 四化（来源：rules_book1.md §5）----
-// 庚干天相化忌：用户定只加注、不改四化表（来源：《字令》令东来第十九章）
+// 庚干天相化忌：用户定只加注、不改四化表（来源：《紫微斗数命理学》令东来第十九章）
 const GENG_TIANXIANG_NOTE = '（令东来认为庚年天相也化忌）';
 const SIHUA = {
   '甲': {禄:'廉贞', 权:'破军', 科:'武曲', 忌:'太阳'},
@@ -1131,8 +1131,8 @@ function getBoshiStars(lusunPos, yearBrIdx, gender) {
 // 长生起始宫：金→巳(5)，木→亥(11)，火→寅(2)，水/土→申(8)
 const CHANGSHENG_START = { 2:8, 3:11, 4:5, 5:8, 6:2 };
 const CHANGSHENG_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
-// 顺逆论阴阳（用户定 2026-10-29）：阳男阴女顺、阴男阳女逆，依《内部讲义》第四课、《字全书0》第22页
-// 另说《精成》第24条、《全书》卷二"男顺女逆"，见盘上长生旁的说明标记
+// 顺逆论阴阳（用户定 2026-10-29）：阳男阴女顺、阴男阳女逆，依《紫微斗数内部讲义》第四课、《紫微斗数集成全书》第22页
+// 另说《紫微斗数精成》第24条、《紫微斗數全書》卷二"男顺女逆"，见盘上长生旁的说明标记
 function getChangshengStars(ju, gender, yearStemIdx) {
   const startBr = CHANGSHENG_START[ju];
   const isYang = (yearStemIdx % 2 === 0);
@@ -2824,11 +2824,11 @@ function annotateStarConditions(text, branchIdx, stars) {
 // 四化争议标注：在解盘文本中遇到争议四化时插入来源说明
 // 格式："A条件，B内容，一说C内容（来源：xxx）"
 const SIHUA_CONFLICTS = {
-  '戊': { type: '科', main: '右弼', mainSrc: '《精成》', alts: [{star:'太阳', src:'《初级讲义》'}] },
-  '庚': { type: '科', main: '太阴', mainSrc: '《精成》', alts: [{star:'天府', src:'《创作原理》《初级讲义》'}] },
-  '壬': { type: '科', main: '左辅', mainSrc: '《精成》', alts: [{star:'天府', src:'《初级讲义》'}] },
-  '己': { type: '忌', main: '文曲', mainSrc: '《精成》', alts: [{star:'破军', src:'《创作原理》'}] },
-  '辛': { type: '忌', main: '文昌', mainSrc: '《精成》', alts: [{star:'天梁', src:'《创作原理》'}] },
+  '戊': { type: '科', main: '右弼', mainSrc: '《紫微斗数精成》', alts: [{star:'太阳', src:'《天翼术数研究中心·紫微斗数初级讲义》'}] },
+  '庚': { type: '科', main: '太阴', mainSrc: '《紫微斗数精成》', alts: [{star:'天府', src:'《紫微斗数的创作原理》《天翼术数研究中心·紫微斗数初级讲义》'}] },
+  '壬': { type: '科', main: '左辅', mainSrc: '《紫微斗数精成》', alts: [{star:'天府', src:'《天翼术数研究中心·紫微斗数初级讲义》'}] },
+  '己': { type: '忌', main: '文曲', mainSrc: '《紫微斗数精成》', alts: [{star:'破军', src:'《紫微斗数的创作原理》'}] },
+  '辛': { type: '忌', main: '文昌', mainSrc: '《紫微斗数精成》', alts: [{star:'天梁', src:'《紫微斗数的创作原理》'}] },
 };
 function annotateConflicts(text, yearStem) {
   if (!yearStem || !SIHUA_CONFLICTS[yearStem]) return text;
@@ -2993,7 +2993,7 @@ function renderRule2Palace(branchIdx) {
     if (structured) {
       // 已结构化：只显示本盘成立的结论；原书全文收起备查
       const raw = text ? formatText(typeof filterRuleText === 'function' ? filterRuleText(text, targetBrIdx, stars, star) : text) : '';
-      sec += structured + (raw ? `<details class="rc-raw"><summary>原书全文（精成，备查）</summary><div class="r2-text">${raw}</div></details>` : '');
+      sec += structured + (raw ? `<details class="rc-raw"><summary>原书全文（《紫微斗数精成》，备查）</summary><div class="r2-text">${raw}</div></details>` : '');
       sec += `</div>`;
       return sec;
     }
@@ -3103,7 +3103,7 @@ function buildAiPacket() {
       let text = rule2Lookup(star, pn, tgt);
       if (!text) continue;
       if (typeof filterRuleText === 'function') text = filterRuleText(text, tgt, stars, star);
-      const src = '精成·' + star + (borrowed ? '（借对宫）' : '') + '在' + pn;
+      const src = '《紫微斗数精成》·' + star + (borrowed ? '（借对宫）' : '') + '在' + pn;
       for (const sen of strip(text).split(/(?<=[。；])/)) if (sen.replace(/[。；\s]/g, '').length > 1) add(sen, src);
     }
     const fmt = a => (a && a.length) ? a.join('、') : '无';
@@ -3700,7 +3700,7 @@ function runHehun() {
 
 // 长生顺逆说明标记：点"·"弹出，点别处收起
 (function () {
-  const TEXT = '长生十二神顺逆：本盘按阳男阴女顺行、阴男阳女逆行（年干分阴阳）。依据《内部讲义》第四课（长生随大限方向）、《字全书0》第22页（阳男阴女顺行）。另说：《精成》第24条、《全书》卷二作“男顺女逆”。两书安小限时明言“不论阴阳”，安长生时未言，故从论阴阳。';
+  const TEXT = '长生十二神顺逆：本盘按阳男阴女顺行、阴男阳女逆行（年干分阴阳）。依据《紫微斗数内部讲义》第四课（长生随大限方向）、《紫微斗数集成全书》第22页（阳男阴女顺行）。另说：《紫微斗数精成》第24条、《紫微斗數全書》卷二作“男顺女逆”。两书安小限时明言“不论阴阳”，安长生时未言，故从论阴阳。';
   let tip = null;
   const hide = () => { if (tip) tip.hidden = true; };
   const show = (el) => {
