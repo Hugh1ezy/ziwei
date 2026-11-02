@@ -69,7 +69,7 @@
   function parseRules(text) {
     const rules = [];
     for (const line of text.split(/\r?\n/)) {
-      if (!/^[A-Z]\d+[a-z]?\|/.test(line)) continue;
+      if (!/^[A-Z]\d+[a-z]*\|/.test(line)) continue;
       const [id, cond, topic, concl, quote, src] = line.split('|');
       const items = concl.split('／').map(c => {
         const m = c.match(TOPIC_RE);
