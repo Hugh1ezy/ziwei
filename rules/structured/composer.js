@@ -60,8 +60,8 @@
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
 
-  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','配偶','兄弟','子女','生育','本人','六亲','健康','僧道'];
-  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|配偶|兄弟|子女|生育|本人|六亲|健康|僧道):(.+)$/;
+  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','配偶','兄弟','子女','生育','迁移','交友','本人','六亲','健康','僧道'];
+  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|配偶|兄弟|子女|生育|迁移|交友|本人|六亲|健康|僧道):(.+)$/;
 
   // ---------- 解析规则表、同义表 ----------
   function parseRules(text) {
@@ -133,6 +133,8 @@
     if ((mm = atom.match(/^月=(.+)$/)))   return !F.leap && mm[1].split('/').map(Number).includes(F.lmonth);
     // 命宫、迁移宫都没有所列之星（精成英星入庙"命迁线无七煞星"）
     if ((mm = atom.match(/^命迁无:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming, F.sf[3]], s));
+    // 本宫或对宫本宫有所列之星（迁移宫表"命迁逢昌陀铃"：命宫、迁移宫两宫之内）
+    if ((mm = atom.match(/^命迁:(.+)$/))) return expand(mm[1].split('/')).some(s => inPalaces(F, [F.ming, F.sf[3]], s));
     if ((mm = atom.match(/^会:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^不会:(.+)$/))) return !expand(mm[1].split('/')).some(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^夹:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, F.jia, s));
@@ -157,6 +159,8 @@
     if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     // 邻宫有生年化X之星（天相"财荫夹印""刑忌夹印"）
     if ((mm = atom.match(/^夹化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.jia, F.sihua[h]));
+    // 身宫就在本宫（迁移宫表太阴"若身宫在此"）
+    if (atom === '身宫在本宫') return F.shen === F.ming;
     switch (atom) {
       case '百官':   return guanPairs(F).some(p => pairOK(F, p));
       case '非百官': return !guanPairs(F).some(p => pairOK(F, p));
@@ -245,6 +249,8 @@
       if (/^日=/.test(a))   return '农历' + F.lday + '日生';
       if (/^月=/.test(a))   return '农历' + F.lmonth + '月生';
       if ((m = a.match(/^命迁无:(.+)/))) return '命宫、迁移宫无' + list(m[1]);
+      if ((m = a.match(/^命迁:(.+)/)))  return '命宫、迁移宫有' + expand(m[1].split('/')).filter(s => inPalaces(F, [F.ming, F.sf[3]], s)).join('、');
+      if (a === '身宫在本宫') return '身宫在' + (P || '命宫');
       if ((m = a.match(/^不同宫:(.+)/))) return (P || '命宫') + '无' + list(m[1]);
       if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
       if ((m = a.match(/^会:(.+)/)))   return '三方四正见' + present(m[1].split('/'));
