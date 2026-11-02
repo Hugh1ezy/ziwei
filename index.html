@@ -878,7 +878,7 @@ function getYearBranchStars(yearBrIdx) {
   const jieshen = (10 - yearBrIdx + 12) % 12;
   // 天马：寅午戌=申，申子辰=寅，巳酉丑=亥，亥卯未=巳（书第12步行1550，按年支）
   const tianma_map = [2,11,8,5,2,11,8,5,2,11,8,5]; // 子丑寅卯辰巳午未申酉戌亥
-  const tianma = tianma_map[yearBrIdx]; // TODO: 文墨天机显示天马在寅(夫妻宫)，但书中规则按年支=巳，待查证
+  const tianma = tianma_map[yearBrIdx]; // 2026-11-02 查证：精成、全书卷二、字全书、南北派（注明“以生年定天马”）安法都按年支，与 iztro 一致；文墨天机不同属其安法差异。钦天四化提到“月马”但未给安法，故不另排
   // 蜚廉：子=申,丑=酉,寅=戌,卯=巳,辰=午,巳=未,午=寅,未=卯,申=辰,酉=亥,戌=子,亥=丑
   const feilian_map = [8,9,10,5,6,7,2,3,4,11,0,1];
   const feilian = feilian_map[yearBrIdx];
