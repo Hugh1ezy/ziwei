@@ -12,7 +12,13 @@
   const GROUPS = {
     // 精成："红、喜、贪、姚、咸、沐浴等桃花星"（贪狼为同宫主星，此处不计）
     '桃花': ['红鸾','天喜','天姚','咸池','沐浴'],
+    // 他宫规则表（夫妻宫起）用的星组
+    '六吉': ['左辅','右弼','文昌','文曲','天魁','天钺'],
+    '四煞': ['擎羊','陀罗','火星','铃星'],
+    '六煞': ['擎羊','陀罗','火星','铃星','地空','地劫'],
   };
+  const MAIN14 = ['紫微','天机','太阳','武曲','天同','廉贞','天府','太阴','贪狼','巨门','天相','天梁','七杀','破军'];
+  const JI_PAIRS = [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']];
   const LIUJI = ['左辅','右弼','文昌','文曲','天魁','天钺']; // 字全书：吉星代表左辅右弼天魁天钺文昌文曲
   const SISHA = ['擎羊','陀罗','火星','铃星'];                 // 字全书：凶徒代表擎羊陀罗火星铃星
   const LIUSHA = [...SISHA, '地空', '地劫'];
@@ -54,8 +60,8 @@
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
 
-  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','六亲','健康','僧道'];
-  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|六亲|健康|僧道):(.+)$/;
+  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','配偶','本人','六亲','健康','僧道'];
+  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|配偶|本人|六亲|健康|僧道):(.+)$/;
 
   // ---------- 解析规则表、同义表 ----------
   function parseRules(text) {
@@ -84,13 +90,14 @@
 
   // ---------- 从命盘数据取事实 ----------
   // data：index.html 中 renderChart(data) 收到的对象
-  function extractFacts(data) {
-    const m = data.mingGongBrIdx;
+  // palBr/palName：他宫规则表用，以该宫为"本宫"（同宫、三方四正、夹、对宫、支都按该宫算）；宫:命宫= 仍按真命宫
+  function extractFacts(data, palBr, palName) {
+    const m = palBr === undefined ? data.mingGongBrIdx : palBr;
     const at = i => { const p = data.stars[((i % 12) + 12) % 12]; return [...p.main, ...p.aux]; };
     const sf = [m, m + 4, m + 8, m + 6].map(i => ((i % 12) + 12) % 12); // 三方四正
     const jia = [m - 1, m + 1].map(i => ((i % 12) + 12) % 12);           // 左右邻宫
     return {
-      ming: m, sf, jia, at, branch: BR[m],
+      ming: m, sf, jia, at, branch: BR[m], realMing: data.mingGongBrIdx, pal: palName || '命宫',
       stem: STEMS[data.yearStemIdx], yearBr: BR[data.yearBrIdx],
       gender: data.gender === 'female' ? '女' : '男',
       ju: data.ju, shen: data.shenGongBrIdx,
@@ -139,6 +146,10 @@
     if ((mm = atom.match(/^对宫:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, [F.sf[3]], s));
     if ((mm = atom.match(/^会全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^夹全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.jia, s));
+    // 本宫主星有X（他宫规则表每条的前提）；同时记下该星，供庙旺/陷判断
+    if ((mm = atom.match(/^星=(.+)$/))) { F.star = mm[1]; return F.at(F.ming).includes(mm[1]); }
+    if ((mm = atom.match(/^宫无:(.+?)=(.+)$/))) return !expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
+    if ((mm = atom.match(/^对宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.sf[3]], F.sihua[h]));
     if ((mm = atom.match(/^宫:(.+?)=(.+)$/))) return expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
     if ((mm = atom.match(/^化:(.+)=(.+)$/))) return mm[2].split('/').some(h => mm[1].split('/').includes(F.sihua[h]));
     if ((mm = atom.match(/^同宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h]));
@@ -164,6 +175,11 @@
       // 用户定：左右、昌曲、魁钺三组各见至少一颗
       case '君臣庆会':
         return [['左辅','右弼'],['文昌','文曲'],['天魁','天钺']].every(g => g.some(s => inPalaces(F, F.sf, s)));
+      // 程序约定：左右、昌曲、魁钺任一对两颗都在三方四正或邻宫
+      case '六吉对星': return JI_PAIRS.some(p => pairOK(F, p));
+      // 程序约定：三方四正见六吉之一而其对星不在三方四正
+      case '六吉单星': return JI_PAIRS.some(([a, b]) => inPalaces(F, F.sf, a) !== inPalaces(F, F.sf, b));
+      case '同宫单星': return JI_PAIRS.some(([a, b]) => inPalaces(F, [F.ming], a) !== inPalaces(F, [F.ming], b));
       case '命迁无化忌': return !(F.sihua['忌'] && inPalaces(F, [F.ming, F.sf[3]], F.sihua['忌']));
       case '无化忌': return !(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
       case '化忌':   return !!(F.sihua['忌'] && inPalaces(F, F.sf, F.sihua['忌']));
@@ -187,7 +203,14 @@
     return inPalaces(F, idx, a) && inPalaces(F, idx, b);
   }
 
-  const palAt = (F, name) => (((F.ming - PALACE_IDX[name]) % 12) + 12) % 12;
+  const palAt = (F, name) => {
+    const m = F.realMing === undefined ? F.ming : F.realMing;
+    return (((m - PALACE_IDX[name]) % 12) + 12) % 12;
+  };
+  // 他宫规则表：每条规则以"星=X"开头，不需要另给主星
+  function matchPalace(rules, F) {
+    return rules.filter(r => r.cond.every(a => evalAtom(F, a)));
+  }
 
   // star：命宫主星（默认紫微）
   function match(rules, F, star) {
@@ -200,31 +223,39 @@
   function label(F, cond) {
     const list = x => expand(x.split('/')).join('、');
     const present = arr => expand(arr).filter(s => inPalaces(F, F.sf, s)).join('、');
-    const part = cond.map(a => {
+    const P = F.pal && F.pal !== '命宫' ? F.pal : null; // 他宫
+    const sm = cond.map(a => a.match(/^星=(.+)/)).find(Boolean);
+    if (sm) F.star = sm[1];
+    const part = cond.filter(a => !/^星=/.test(a)).map(a => {
       let m;
-      if (/^支=/.test(a))   return (F.star || '紫微') + '在' + F.branch;
+      if (/^支=/.test(a))   return P ? F.star + '在' + P + '·' + F.branch : (F.star || '紫微') + '在' + F.branch;
+      if ((m = a.match(/^宫无:(.+?)=(.+)/))) return m[1] + '宫无' + expand(m[2].split('/')).slice(0, 4).join('、') + (expand(m[2].split('/')).length > 4 ? '等' : '');
+      if ((m = a.match(/^对宫化:(.+)/))) return '对宫有化' + m[1];
+      if (a === '六吉对星') return '六吉成对会照';
+      if (a === '六吉单星') return '六吉只见单星';
+      if (a === '同宫单星') return '本宫有六吉单星';
       if (/^干=/.test(a))   return F.stem + '年生';
       if (/^支年=/.test(a)) return F.yearBr + '年生';
       if ((m = a.match(/^性别=(.+)/))) return m[1] + '命';
       if (/^局=/.test(a))   return JU_NAME[F.ju];
       if (/^纳音=/.test(a)) return '年柱纳音' + F.nayin;
-      if (/^长生=/.test(a)) return '命宫逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
+      if (/^长生=/.test(a)) return (P || '命宫') + '逢' + CS_NAMES.find(s => F.at(F.ming).includes(s));
       if ((m = a.match(/^同宫全:(.+)/))) return list(m[1]) + '同宫';
       if (/^时=/.test(a))   return BR[F.hour] + '时生';
       if (/^日=/.test(a))   return '农历' + F.lday + '日生';
       if (/^月=/.test(a))   return '农历' + F.lmonth + '月生';
       if ((m = a.match(/^命迁无:(.+)/))) return '命宫、迁移宫无' + list(m[1]);
-      if ((m = a.match(/^不同宫:(.+)/))) return '命宫无' + list(m[1]);
+      if ((m = a.match(/^不同宫:(.+)/))) return (P || '命宫') + '无' + list(m[1]);
       if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
       if ((m = a.match(/^会:(.+)/)))   return '三方四正见' + present(m[1].split('/'));
       if ((m = a.match(/^不会:(.+)/))) return '三方四正无' + list(m[1]);
-      if ((m = a.match(/^夹:(.+)/)))   return list(m[1]) + '夹命';
+      if ((m = a.match(/^夹:(.+)/)))   return list(m[1]) + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^对:(.+)/)))   return m[1] + '成对会照';
-      if ((m = a.match(/^夹对:(.+)/))) return m[1] + '夹命';
+      if ((m = a.match(/^夹对:(.+)/))) return m[1] + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^身宫有:(.+)/))) return '身宫有' + m[1];
       if ((m = a.match(/^对宫:(.+)/)))   return '对宫有' + expand(m[1].split('/')).filter(s => inPalaces(F, [F.sf[3]], s)).join('、');
       if ((m = a.match(/^会全:(.+)/)))   return '三方四正' + list(m[1]) + '会齐';
-      if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + '夹命';
+      if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^宫:(.+?)=(.+)/))) return m[1] + '宫有' + expand(m[2].split('/')).filter(s => inPalaces(F, [palAt(F, m[1])], s)).join('、');
       if ((m = a.match(/^化:(.+)=(.+)/))) { const h = m[2].split('/').find(h => m[1].split('/').includes(F.sihua[h])); return F.sihua[h] + '化' + h; }
       if ((m = a.match(/^同宫化:(.+)/))) return '命宫有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
@@ -346,7 +377,7 @@
 
   const jiCount = F => countSF(F, LIUJI) + ['禄','权','科'].filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).length;
 
-  const api = { parseRules, parseSynonyms, extractFacts, match, compose, renderHTML, evalAtom, label };
+  const api = { parseRules, parseSynonyms, extractFacts, match, matchPalace, compose, renderHTML, evalAtom, label };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.RuleComposer = api;
 })(this);

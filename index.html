@@ -2869,12 +2869,17 @@ function rule2Lookup(starName, palaceName, branchIdx) {
 // 已结构化的星：命宫主星 → 规则表文件
 const STRUCTURED_RULES = { '紫微': 'rules/structured/ziwei_minggong.txt', '天机': 'rules/structured/tianji_minggong.txt', '天梁': 'rules/structured/tianliang_minggong.txt', '太阳': 'rules/structured/taiyang_minggong.txt', '武曲': 'rules/structured/wuqu_minggong.txt', '天同': 'rules/structured/tiantong_minggong.txt', '廉贞': 'rules/structured/lianzhen_minggong.txt', '天府': 'rules/structured/tianfu_minggong.txt', '太阴': 'rules/structured/taiyin_minggong.txt', '贪狼': 'rules/structured/tanlang_minggong.txt', '巨门': 'rules/structured/jumen_minggong.txt', '天相': 'rules/structured/tianxiang_minggong.txt', '七杀': 'rules/structured/qisha_minggong.txt', '破军': 'rules/structured/pojun_minggong.txt' };
 const _structCache = {};
+// 命宫以外的宫：已结构化的宫 → 规则表（试点：夫妻宫，只录精成）
+const STRUCTURED_PALACES = { '夫妻': 'rules/structured/fuqi.txt' };
+const _palCache = {};
 async function loadStructuredRules() {
   if (typeof RuleComposer === 'undefined') return;
   try {
     if (!_structCache.__syn) _structCache.__syn = RuleComposer.parseSynonyms(await (await fetch('rules/structured/synonyms.txt')).text());
     for (const [star, url] of Object.entries(STRUCTURED_RULES))
       if (!_structCache[star]) _structCache[star] = RuleComposer.parseRules(await (await fetch(url)).text());
+    for (const [pn, url] of Object.entries(STRUCTURED_PALACES))
+      if (!_palCache[pn]) _palCache[pn] = RuleComposer.parseRules(await (await fetch(url)).text());
   } catch (e) { console.warn('结构化规则加载失败:', e); }
 }
 function renderStructured(star) {
@@ -3072,6 +3077,18 @@ function buildAiPacket() {
     }
     let main = ps.main || [], tgt = br, borrowed = false;
     if (!main.length) { tgt = (br + 6) % 12; main = (stars[tgt] && stars[tgt].main) || []; borrowed = true; }
+    // 已结构化的宫：只给本盘条件成立的结论（同宫双星合在一张表里，一次匹配）
+    if (_palCache[pn] && _lastChartData) {
+      const F = RuleComposer.extractFacts(_lastChartData, tgt, pn);
+      const comp = RuleComposer.compose(RuleComposer.matchPalace(_palCache[pn], F), F, _structCache.__syn);
+      const tag = main.join('') + (borrowed ? '（借对宫）' : '') + '在' + pn;
+      const srcOf = l => ((l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || pn + '宫规则表') + '·' + tag;
+      for (const t of comp) {
+        for (const l of (t.general || [])) add(t.topic + '·' + tag + '通论·' + l.replace(/〔[^〕]*〕/g, ''), srcOf(l));
+        for (const l of (t.lines || [])) add(t.topic + '·' + l.replace(/〔[^〕]*〕/g, ''), srcOf(l));
+      }
+      main = [];
+    }
     for (const star of main) {
       if (pn === '命宫' && !borrowed && STRUCTURED_RULES[star] && _structCache[star] && _lastChartData) {
         const F = RuleComposer.extractFacts(_lastChartData);
