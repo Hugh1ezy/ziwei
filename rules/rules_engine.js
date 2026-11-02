@@ -777,8 +777,10 @@ function matchGeju(ctx, R) {
     }
 
     if (c.same_palace) {
-      // 确定搜索范围：in_sanfang=true时仅搜索命宫三方四正
-      let searchBrs = Array.from({length:12}, (_,i) => i);
+      // 确定搜索范围：默认只看命宫（格局指守命，如字陆"廉贞在未宫守命…雄宿乾元格"）；
+      // in_sanfang=true 看命宫三方四正；anywhere=true（限运类，书未限宫位）才搜全盘
+      let searchBrs = [ctx.mingBr];
+      if (c.anywhere) searchBrs = Array.from({length:12}, (_,i) => i);
       if (c.in_sanfang) {
         const mb = ctx.mingBr;
         searchBrs = [mb, (mb+4)%12, (mb+6)%12, (mb+8)%12];
