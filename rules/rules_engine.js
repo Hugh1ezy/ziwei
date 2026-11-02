@@ -519,7 +519,7 @@ function interpretPalace(ctx, palaceName, R) {
   }
 
   // 2a-sfsy. 三方四正综合庙旺解读（来源：rules_jiedu.md §207步骤2 + rules_jingcheng_compact.md §155大限判断法）
-  // 力量分配：本宫60%、对宫40%、合宫20%、邻宫10%（来源：《初级讲义》rules_jiedu.md:20）
+  // 力量分配：本宫60%、对宫40%、合宫20%、邻宫10%（来源：《天翼术数研究中心·紫微斗数初级讲义》rules_jiedu.md:20）
   if ((sData.main || []).length > 0) {
     const sfBrs = getSanfangBrs(brIdx); // [本宫, 对宫, 三合1, 三合2]
     const JI_STARS = ['左辅','右弼','天魁','天钺','文昌','文曲','禄存','天马'];
@@ -922,8 +922,8 @@ function analyzeJiaGe(ctx, R) {
     const combined = [...leftAll, ...rightAll];
 
     const JIA_PAIRS = [
-      [['太阳','太阴'], `日月夹${palName}=有钱有地位`, -1, '南北派'],
-      [['紫微','天府'], `紫府夹${palName}=贵格`, -1, '南北派'],
+      [['太阳','太阴'], `日月夹${palName}=有钱有地位`, -1, '《紫微斗數南北派斷訣》'],
+      [['紫微','天府'], `紫府夹${palName}=贵格`, -1, '《紫微斗數南北派斷訣》'],
       [['左辅','右弼'], `左右夹${palName}=吉`, -1, '4.2'],
       [['文昌','文曲'], `昌曲夹${palName}=聪明`, -1, '4.2'],
       [['天魁','天钺'], `魁钺夹${palName}=贵人`, -1, '4.2'],
