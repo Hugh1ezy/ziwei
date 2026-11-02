@@ -333,10 +333,10 @@ function interpretPalace(ctx, palaceName, R) {
       // 庙旺星——看三方四正是否有吉星扶助或煞星冲破
       if (localShaCount === 0 && preJiCount >= 3 && preShaCount === 0) {
         sfSuffix = `本宫无煞且三方四正有${preJiCount}吉星众吉拱照，星力得以充分发挥，大吉。`;
-      } else if (localShaCount === 0 && preJiCount >= 2) {
-        sfSuffix = `本宫无煞，三方四正有${preJiCount}吉${preShaCount > 0 ? preShaCount + '煞' : ''}扶助，吉性可发挥。`;
+      } else if (localShaCount === 0 && preJiCount >= 2 && preShaCount < preJiCount) {
+        sfSuffix = `本宫无煞，三方四正有${preJiCount}吉星扶助${preShaCount > 0 ? '（另见' + preShaCount + '煞，含化忌）' : ''}，吉性可发挥。`;
       } else if (preShaCount >= 3) {
-        sfSuffix = `然三方四正有${preShaCount}煞凑聚${preHasJi ? '且见化忌' : ''}，庙旺虽强而外援不足，成就需经波折辛劳。`;
+        sfSuffix = `然三方四正有${preShaCount}煞凑聚${preHasJi ? '（含化忌）' : ''}，庙旺虽强而外援不足，成就需经波折辛劳。`;
       } else if (localShaCount > 0) {
         sfSuffix = `本宫见${localShaCount}煞同守，庙旺可驾驭煞星${localJiCount > 0 ? '，兼有' + localJiCount + '吉星扶助' : ''}。`;
       }
@@ -347,7 +347,7 @@ function interpretPalace(ctx, palaceName, R) {
       } else if (preShaCount >= 2 && preJiCount <= 1) {
         sfSuffix = `三方四正煞星${preShaCount}颗而吉星仅${preJiCount}颗，外援薄弱，恐难成就。`;
       } else if (preShaCount > 0 && preJiCount > 0) {
-        sfSuffix = `三方四正吉${preJiCount}煞${preShaCount}混杂，需以努力化解阻碍方能成事。`;
+        sfSuffix = `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}混杂，需以努力化解阻碍方能成事。`;
       }
     } else if (bright === 2) {
       // 平地——三方四正影响权重更大
@@ -395,12 +395,12 @@ function interpretPalace(ctx, palaceName, R) {
         commentary = `${st}在${branch}宫为【${label}】，四恶曜星力中等，开创力有余但稳定性不足。`;
         if (starSpecial) commentary += starSpecial;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount > preShaCount ? '吉多可扶助成就' : preShaCount > preJiCount ? '煞多则冲劲易变冲动' : '吉凶相当，成败在一念之间'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount > preShaCount ? '吉多可扶助成就' : preShaCount > preJiCount ? '煞多则冲劲易变冲动' : '吉凶相当，成败在一念之间'}。`;
       } else if (bright === 2) {
         commentary = `${st}在${branch}宫为【${label}】，四恶曜平地则善恶参半，吉凶不定。`;
         if (starSpecial) commentary += starSpecial;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '有吉则尚可驾驭' : '见煞则易走偏锋'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount >= 2 ? '有吉则尚可驾驭' : '见煞则易走偏锋'}。`;
       } else {
         commentary = `${st}在${branch}宫为【${label}】，四恶曜失陷——杀气不受控制，破坏力极强。${isHuo && hasJi ? '此为火性星陷地化忌，凶力倍增。' : ''}`;
         if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，失陷遇煞大凶，主灾祸刑伤。`;
@@ -417,11 +417,11 @@ function interpretPalace(ctx, palaceName, R) {
       } else if (bright >= 3) {
         commentary = `${st}在${branch}宫为【${label}】，暗星星力中等，口舌之能可用但易招是非。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '有吉星化解可趋吉' : '化禄化权则更佳'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount >= 2 ? '有吉星化解可趋吉' : '化禄化权则更佳'}。`;
       } else if (bright === 2) {
         commentary = `${st}在${branch}宫为【${label}】，暗星平地则是非口舌较多，人际关系需费心经营。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '见吉可减少是非' : '是非难免'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount >= 2 ? '见吉可减少是非' : '是非难免'}。`;
       } else {
         commentary = `${st}在${branch}宫为【${label}】，暗星失陷则是非缠身、口舌招灾，人际关系差，六亲缘薄多猜忌。`;
         if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，更主暗损、小人陷害。`;
@@ -435,7 +435,7 @@ function interpretPalace(ctx, palaceName, R) {
       } else if (bright >= 3) {
         commentary = `${st}在${branch}宫为【${label}】，财星星力中等，求财需劳心劳力，刚克之性尚可控制。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '宜见吉星柔化，可成' : '外援不足，需自力更生'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount >= 2 ? '宜见吉星柔化，可成' : '外援不足，需自力更生'}。`;
       } else if (bright === 2) {
         commentary = `${st}在${branch}宫为【${label}】，财星平地则进财平平，孤克之性渐显，人际偏刚硬。`;
         if (sfSuffix) commentary += sfSuffix;
@@ -459,7 +459,7 @@ function interpretPalace(ctx, palaceName, R) {
       } else if (bright === 2) {
         commentary = `${st}在${branch}宫为【${label}】，星力平平，光芒黯淡，贵人运减弱。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount > preShaCount ? '逢吉则尚可' : '不利'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount > preShaCount ? '逢吉则尚可' : '不利'}。`;
       } else {
         commentary = `${st}在${branch}宫为【${label}】，火性星落陷光芒全失，主有志难伸、是非缠身。${hasJi ? '太阳为火性星，陷地化忌凶力倍增。' : ''}`;
         if (localShaCount > 0) commentary += `本宫有${localShaCount}煞同守，主目疾、头痛或父亲不利。`;
@@ -478,15 +478,15 @@ function interpretPalace(ctx, palaceName, R) {
       } else if (bright >= 3) {
         commentary = `${st}在${branch}宫为【${label}】，星力尚可，正面特质可以发挥但力度稍减。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount >= 2 ? '有吉星扶助则趋吉' : '遇煞星则力不从心'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount >= 2 ? '有吉星扶助则趋吉' : '遇煞星则力不从心'}。`;
       } else if (bright === 2) {
         commentary = `${st}在${branch}宫为【${label}】，星力平平，吉凶特质均不明显。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preJiCount > preShaCount ? '逢吉则平顺' : '逢煞则不利'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preJiCount > preShaCount ? '逢吉则平顺' : '逢煞则不利'}。`;
       } else {
         commentary = `${st}在${branch}宫为【${label}】，星力甚弱，正面特质难以发挥，负面特质容易显现。`;
         if (sfSuffix) commentary += sfSuffix;
-        else commentary += `三方四正吉${preJiCount}煞${preShaCount}，${preShaCount >= 2 ? '遇煞凶性加重，即使有吉星亦难完全化解' : '凶性渐显'}。`;
+        else commentary += `三方四正吉${preJiCount}煞${preShaCount}${preHasJi ? '（煞含化忌）' : ''}，${preShaCount >= 2 ? '遇煞凶性加重，即使有吉星亦难完全化解' : '凶性渐显'}。`;
       }
     }
     const sev = bright <= 1 ? (isSiE || isHuo ? 2 : 1) : 0;
@@ -578,7 +578,7 @@ function interpretPalace(ctx, palaceName, R) {
           sfComment = `三方四正综合：${palLabel}主星庙旺，但三方有${details.join('、')}，命身虽佳而三宫欠吉——纵有才华亦难青云，秀而不实。`;
           items.push({ type: 'sanfang_bright', text: sfComment, severity: 1, src: '§三方四正综合/jiedu217' });
         } else if (sfShaCount >= 3 && sfJiCount <= 1) {
-          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正煞星${sfShaCount}颗而吉星仅${sfJiCount}颗，煞多吉少——主星虽强，一生仍多阻碍波折。`;
+          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正煞星${sfShaCount}颗${sfHasJi ? '（含化忌）' : ''}而吉星仅${sfJiCount}颗，煞多吉少——主星虽强，一生仍多阻碍波折。`;
           items.push({ type: 'sanfang_bright', text: sfComment, severity: 1, src: '§三方四正综合/jiedu207' });
         }
       }
@@ -591,17 +591,18 @@ function interpretPalace(ctx, palaceName, R) {
       // 规则3：本宫主星庙旺+煞同守+三方吉凶混杂→阻滞辛劳（rules_jingcheng_compact.md:155）
       else if (localAvg >= 5 && sfShaCount > 0 && sfJiCount > 0) {
         if (palaceName !== '命宫' || !items.some(i => i.type === 'sanfang_bright')) {
-          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正吉${sfJiCount}煞${sfShaCount}混杂——虽有能力但过程多阻碍辛劳，需努力化解。`;
+          sfComment = `三方四正综合：${palLabel}主星庙旺，但三方四正吉${sfJiCount}煞${sfShaCount}${sfHasJi ? '（煞含化忌）' : ''}混杂——虽有能力但过程多阻碍辛劳，需努力化解。`;
           items.push({ type: 'sanfang_bright', text: sfComment, severity: 0, src: '§三方四正综合/jingcheng155' });
         }
       }
       // 规则4：本宫主星失陷+三方煞凑→大凶（rules_jingcheng_compact.md:155）
-      else if (localAvg <= 2 && sfShaCount >= 3) {
-        sfComment = `三方四正综合：${palLabel}主星失陷，三方四正又有${sfShaCount}颗煞星凑聚${sfHasJi ? '且见化忌' : ''}——本宫事务凶多吉少，须格外注意防范。`;
+      // 精成155只分“庙旺得地”与“失陷”，平地不算失陷：只取陷、不得地（亮度≤1）
+      else if (localAvg <= 1 && sfShaCount >= 3) {
+        sfComment = `三方四正综合：${palLabel}主星失陷，三方四正又有${sfShaCount}颗煞星凑聚${sfHasJi ? '（含化忌）' : ''}——本宫事务凶多吉少，须格外注意防范。`;
         items.push({ type: 'sanfang_bright', text: sfComment, severity: 2, src: '§三方四正综合/jingcheng155' });
       }
       // 规则5：本宫主星失陷但三方有吉扶→平常，不至大凶
-      else if (localAvg <= 2 && sfJiCount >= 2 && sfShaCount <= 1) {
+      else if (localAvg <= 1 && sfJiCount >= 2 && sfShaCount <= 1) {
         sfComment = `三方四正综合：${palLabel}主星失陷，但三方四正有${sfJiCount}颗吉星扶助——虽本宫力弱，吉星可部分化解，不至大凶但仍需谨慎。`;
         items.push({ type: 'sanfang_bright', text: sfComment, severity: 0, src: '§三方四正综合/jingcheng155' });
       }
