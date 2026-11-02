@@ -325,6 +325,17 @@ button#calcBtn:hover { background: #b22222; }
   border-radius: 8px;
   padding: 16px 20px;
 }
+#ai-box { margin-top: 18px; border-top: 1px dashed #c8a060; padding-top: 12px; }
+.ai-tip { font-size: 0.85em; color: #666; margin: 0 0 8px; line-height: 1.6; }
+.ai-btn { padding: 5px 14px; border: 1px solid #2d5016; background: #2d5016; color: #fff; border-radius: 4px; cursor: pointer; margin: 4px 0; }
+#ai-copy-msg { font-size: 0.85em; color: #2d5016; margin-left: 8px; }
+#ai-packet, #ai-reply { display: block; width: 100%; box-sizing: border-box; min-height: 120px; margin: 8px 0; font-size: 0.85em; }
+#ai-packet[hidden] { display: none; }
+#ai-check .ai-ok { background: #eef6e6; }
+#ai-check .ai-bad { background: #fde2e2; color: #a00; }
+#ai-check span { cursor: pointer; border-radius: 2px; }
+#ai-check .ai-sum { font-size: 0.85em; margin-bottom: 6px; }
+#ai-src { font-size: 0.82em; color: #555; background: #f7f3e6; padding: 6px 8px; margin-top: 8px; border-radius: 4px; white-space: pre-wrap; }
 #rule2-panel h3 {
   color: #2d5016;
   font-size: 1em;
@@ -630,6 +641,16 @@ button#calcBtn:hover { background: #b22222; }
   <h3>命盘解读</h3>
   <div class="r2-palace-tabs" id="r2-tabs"></div>
   <div id="r2-content"></div>
+  <div id="ai-box">
+    <h3>AI 综合解读（免费：复制给 AI）</h3>
+    <p class="ai-tip">① 点“复制给 AI”，把本盘全部断语（带编号和出处）连同写作规矩复制下来；② 粘贴到你常用的 AI（Claude、DeepSeek 等）；③ 把 AI 写好的解读粘回下面的框，点“核对出处”，没标编号或编号不存在的句子会标红。</p>
+    <button class="ai-btn" onclick="copyAiPacket()">复制给 AI</button>
+    <span id="ai-copy-msg"></span>
+    <textarea id="ai-packet" readonly hidden></textarea>
+    <textarea id="ai-reply" placeholder="把 AI 写好的解读粘贴到这里"></textarea>
+    <button class="ai-btn" onclick="checkAiReply()">核对出处</button>
+    <div id="ai-check"></div>
+  </div>
 </div>
 
 <script>
@@ -3027,6 +3048,100 @@ function renderRule2Palace(branchIdx) {
   return html;
 }
 
+// ===== AI 综合解读（方案A：复制给AI，粘回核对编号）=====
+// 只把程序从书里取出的本盘断语交给 AI，AI 只做措辞连接；每句须标编号，粘回后程序核对。
+let _aiItems = null; // 编号 → { palace, text, src }
+function buildAiPacket() {
+  if (!_rule2State || !_chartState) return null;
+  const { palaceMap, stars } = _rule2State;
+  const ORDER = ['命宫','兄弟','夫妻','子女','财帛','疾厄','迁移','奴仆','官禄','田宅','福德','父母'];
+  const strip = t => String(t || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  const items = {}, sections = [];
+  for (const pn of ORDER) {
+    const br = Object.keys(palaceMap).map(Number).find(b => palaceMap[b] === pn);
+    if (br === undefined) continue;
+    const ps = stars[br] || {}, code = pn[0];
+    let n = 0; const lines = [];
+    const add = (text, src) => { text = strip(text); if (!text) return; const id = code + (++n);
+      items[id] = { palace: pn, text, src }; lines.push('[' + id + '] ' + text + '（出处：' + src + '）'); };
+    const er = _engineResults && _engineResults[pn];
+    if (er && er.items) for (const it of er.items) add(it.text, it.src || '规则引擎');
+    if (pn === '命宫' && _engineResults) {
+      for (const g of (_engineResults._geju || [])) add(g.name + '：' + g.text, g.src || '格局表');
+      for (const j of (_engineResults._jiaGe || [])) add(j.text, j.src || '夹格表');
+    }
+    let main = ps.main || [], tgt = br, borrowed = false;
+    if (!main.length) { tgt = (br + 6) % 12; main = (stars[tgt] && stars[tgt].main) || []; borrowed = true; }
+    for (const star of main) {
+      if (pn === '命宫' && !borrowed && STRUCTURED_RULES[star] && _structCache[star] && _lastChartData) {
+        const F = RuleComposer.extractFacts(_lastChartData);
+        const hits = RuleComposer.match(_structCache[star], F, star);
+        const comp = hits.length ? RuleComposer.compose(hits, F, _structCache.__syn) : [];
+        for (const t of comp) {
+          for (const l of (t.lines || [])) add(t.topic + '·' + l.replace(/〔[^〕]*〕/g, ''), (l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || star + '坐命规则表');
+          for (const l of (t.general || [])) add(t.topic + '·' + star + '坐命通论·' + l.replace(/〔[^〕]*〕/g, ''), (l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || star + '坐命规则表');
+        }
+        continue;
+      }
+      let text = rule2Lookup(star, pn, tgt);
+      if (!text) continue;
+      if (typeof filterRuleText === 'function') text = filterRuleText(text, tgt, stars, star);
+      const src = '精成·' + star + (borrowed ? '（借对宫）' : '') + '在' + pn;
+      for (const sen of strip(text).split(/(?<=[。；])/)) if (sen.replace(/[。；\s]/g, '').length > 1) add(sen, src);
+    }
+    const fmt = a => (a && a.length) ? a.join('、') : '无';
+    const hua = ps.hua ? Object.entries(ps.hua).map(([k, v]) => k + '化' + v).join('、') : '';
+    sections.push('【' + pn + '·' + BRANCHES[br] + '宫】主星：' + fmt(ps.main) + (borrowed ? '（空宫，借对宫' + fmt(main) + '）' : '') +
+      '；辅星：' + fmt(ps.aux) + (hua ? '；四化：' + hua : '') + '\n' + (lines.length ? lines.join('\n') : '（本宫程序未取出断语）'));
+  }
+  _aiItems = items;
+  const sex = _chartState.gender === 'male' ? '男' : '女';
+  return '请你根据下面这张紫微斗数命盘的断语，写一篇整盘综合解读。必须遵守以下规矩：\n' +
+    '1. 只能使用下面列出的编号断语，不得加入任何断语以外的命理知识、推断或你自己的看法。你只负责把这些断语用通顺的话连接、归纳起来。\n' +
+    '2. 每一句话的句末都必须用方括号标出它依据的编号，例如 [命3]，依据多条就写 [命3][财2]。没有编号依据的话一律不要写。\n' +
+    '3. 不同书说法不一致时，两说并存，分别标编号，不要替书下结论，也不要说哪本书对。\n' +
+    '4. 某方面断语里没有的，就写“书中断语未涉及”，不要补充。\n' +
+    '5. 按“总论、性格、事业、财运、婚姻、子女、健康、六亲、其他”分段，没有断语的段落省略。用简体中文。\n\n' +
+    '命主：' + sex + '命\n\n' + sections.join('\n\n');
+}
+async function copyAiPacket() {
+  const msg = document.getElementById('ai-copy-msg'), ta = document.getElementById('ai-packet');
+  const text = buildAiPacket();
+  if (!text) { msg.textContent = '请先排盘'; return; }
+  ta.value = text; ta.hidden = false; ta.select();
+  msg.textContent = '若没有自动复制，请在下面框里全选后手动复制';
+  try { await navigator.clipboard.writeText(text); msg.textContent = '已复制（共 ' + Object.keys(_aiItems).length + ' 条断语），去 AI 里粘贴即可'; ta.hidden = true; }
+  catch (e) { msg.textContent = '浏览器不让自动复制，请在下面框里全选后手动复制'; }
+}
+function checkAiReply() {
+  const out = document.getElementById('ai-check');
+  const raw = document.getElementById('ai-reply').value.trim();
+  if (!raw) { out.textContent = '请先粘贴 AI 写好的解读'; return; }
+  if (!_aiItems) buildAiPacket();
+  const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let ok = 0, bad = 0;
+  const html = raw.split('\n').map(line => {
+    const sens = line.match(/[^。！？!?]*(?:[。！？!?]+(?:\s*\[[^\]]+\])*)?/g).filter(x => x.trim());
+    return sens.map(sen => {
+      const plain = sen.replace(/[#*\s>_\-|]/g, '');
+      if (plain.length < 4 && !/\[/.test(sen)) return esc(sen); // 标题、空行等
+      const ids = (sen.match(/\[([^\]]+)\]/g) || []).flatMap(x => x.slice(1, -1).split(/[,，、\]\[\s]+/)).filter(Boolean);
+      const miss = ids.filter(id => !_aiItems || !_aiItems[id]);
+      if (!ids.length || miss.length) { bad++;
+        return '<span class="ai-bad" data-why="' + esc(!ids.length ? '这句没有标编号，书中无据，可能是 AI 自己加的' : '编号不存在：' + miss.join('、')) + '">' + esc(sen) + '</span>'; }
+      ok++;
+      return '<span class="ai-ok" data-ids="' + esc(ids.join(',')) + '">' + esc(sen) + '</span>';
+    }).join('');
+  }).join('<br>');
+  out.innerHTML = '<div class="ai-sum">核对结果：' + ok + ' 句有出处，<b style="color:#a00">' + bad + ' 句标红</b>（点任一句看依据）。注意：程序只能核对编号是否存在，句意是否忠于原断语，请点开对照。</div>' + html + '<div id="ai-src" hidden></div>';
+}
+document.addEventListener('click', e => {
+  const s = e.target.closest && e.target.closest('#ai-check span[data-ids], #ai-check span[data-why]');
+  const box = document.getElementById('ai-src'); if (!s || !box) return;
+  box.hidden = false;
+  box.textContent = s.dataset.why ? s.dataset.why : s.dataset.ids.split(',').map(id => '[' + id + '] ' + _aiItems[id].text + '（出处：' + _aiItems[id].src + '）').join('\n');
+});
+
 // 切换解读面板显示/隐藏
 let _engineResults = null; // 规则引擎全局结果缓存
 
@@ -3043,6 +3158,7 @@ async function toggleRule2Panel() {
       }
     }
     await loadStructuredRules();
+    _aiItems = null;
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
