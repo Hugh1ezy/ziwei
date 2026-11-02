@@ -60,8 +60,8 @@
   // 十二宫：命宫起逆数（兄弟在命宫前一宫）
   const PALACE_IDX = { '命宫':0,'兄弟':1,'夫妻':2,'子女':3,'财帛':4,'疾厄':5,'迁移':6,'奴仆':7,'官禄':8,'田宅':9,'福德':10,'父母':11 };
 
-  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','配偶','本人','六亲','健康','僧道'];
-  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|配偶|本人|六亲|健康|僧道):(.+)$/;
+  const TOPIC_ORDER = ['格局','性格','才能','事业','财富','容貌','婚姻','配偶','兄弟','子女','生育','本人','六亲','健康','僧道'];
+  const TOPIC_RE = /^(格局|性格|才能|事业|财富|容貌|婚姻|配偶|兄弟|子女|生育|本人|六亲|健康|僧道):(.+)$/;
 
   // ---------- 解析规则表、同义表 ----------
   function parseRules(text) {
@@ -258,7 +258,7 @@
       if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^宫:(.+?)=(.+)/))) return m[1] + '宫有' + expand(m[2].split('/')).filter(s => inPalaces(F, [palAt(F, m[1])], s)).join('、');
       if ((m = a.match(/^化:(.+)=(.+)/))) { const h = m[2].split('/').find(h => m[1].split('/').includes(F.sihua[h])); return F.sihua[h] + '化' + h; }
-      if ((m = a.match(/^同宫化:(.+)/))) return '命宫有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
+      if ((m = a.match(/^同宫化:(.+)/))) return (P || '命宫') + '有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if ((m = a.match(/^不会化:(.+)/))) return '三方四正无化' + m[1].split('/').join('、');
       if ((m = a.match(/^会化:(.+)/)))   return '三方四正见' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if ((m = a.match(/^夹化:(.+)/)))   return '邻宫有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.jia, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
