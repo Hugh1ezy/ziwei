@@ -171,6 +171,7 @@
     if ((mm = atom.match(/^对宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.sf[3]], F.sihua[h]));
     if ((mm = atom.match(/^宫:(.+?)=(.+)$/))) return expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
     if ((mm = atom.match(/^化:(.+)=(.+)$/))) return mm[2].split('/').some(h => mm[1].split('/').includes(F.sihua[h]));
+    if ((mm = atom.match(/^不同宫化:(.+)$/))) return !mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h]));
     if ((mm = atom.match(/^同宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h]));
     if ((mm = atom.match(/^不会化:(.+)$/))) return !mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
@@ -292,6 +293,7 @@
       if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^宫:(.+?)=(.+)/))) return m[1] + '宫有' + expand(m[2].split('/')).filter(s => inPalaces(F, [palAt(F, m[1])], s)).join('、');
       if ((m = a.match(/^化:(.+)=(.+)/))) { const h = m[2].split('/').find(h => m[1].split('/').includes(F.sihua[h])); return F.sihua[h] + '化' + h; }
+      if ((m = a.match(/^不同宫化:(.+)/))) return (P || '命宫') + '无化' + m[1].split('/').join('、');
       if ((m = a.match(/^同宫化:(.+)/))) return (P || '命宫') + '有' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, [F.ming], F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if ((m = a.match(/^不会化:(.+)/))) return '三方四正无化' + m[1].split('/').join('、');
       if ((m = a.match(/^会化:(.+)/)))   return '三方四正见' + m[1].split('/').filter(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
