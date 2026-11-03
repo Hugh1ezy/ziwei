@@ -328,6 +328,8 @@
       const e = entries.get(k);
       if (r.cond.length < e.n) { e.topic = it.topic; e.n = r.cond.length; }
       e.rules.push(r);
+      // 同义归并后只显示统一说法，书中原话留着，网页点开可见
+      if (it.text !== k) (e.orig = e.orig || new Set()).add(it.text);
     }
     // 结论顺序：先按最早的无条件规则排（各盘通论顺序一致），再按最早出现的规则
     const pos = new Map(hits.map((r, i) => [r, i]));
@@ -367,7 +369,7 @@
           const dup = segs.length > 1 && seg !== segs[0];
           // cnt：说这句话的书有几本（同书不同卷、不同节只算一本）；通论条把条件组里的书也算上
           const cnt = new Set((dup ? seg : parts).flatMap(([, g]) => g.rules.map(r => (String(r.src).match(/《[^》]+》/) || [r.src])[0]))).size;
-          const it = { text: e.text, dup, note: e.note, cnt,
+          const it = { text: e.text, dup, note: e.note, cnt, orig: e.orig ? [...e.orig] : null,
             srcText: [sset(g0.rules), ...(segs.length > 1 && !dup ? segs[1] : seg.slice(1)).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
           if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
           groups.get(lb).items.push(it);
@@ -405,7 +407,8 @@
     const body = pa.segs.map(sg => {
       const extra = sg.items.filter(e => e.dup).length ? '；凡' + star + '坐命，通论亦有此说' : '';
       const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
-      return '<span class="rc-fold rc-src"' + tipAttr('出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
+      const origs = sg.items.filter(e => e.orig).map(e => e.text + '＝' + e.orig.join('、')).join('；');
+      return '<span class="rc-fold rc-src"' + tipAttr((origs ? '书中原话：' + origs + '。' : '') + '出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
         sg.items.map(e => esc(e.text)).join('、') + '</span>';
     }).join('；');
     const cond = '条件：' + (pa.general ? '凡' + star + '坐命皆是（通论）' : pa.cond) +
