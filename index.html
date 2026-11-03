@@ -643,7 +643,10 @@ button#calcBtn:hover { background: #b22222; }
   <div id="r2-content"></div>
   <div id="ai-box">
     <h3>AI 综合解读（免费：复制给 AI）</h3>
-    <p class="ai-tip">① 点“复制给 AI”，把本盘全部断语（带编号和出处）连同写作规矩复制下来；② 粘贴到你常用的 AI（Claude、DeepSeek 等）；③ 把 AI 写好的解读粘回下面的框，点“核对出处”，没标编号或编号不存在的句子会标红。</p>
+    <p class="ai-tip">① 点“复制给 AI”，把本盘全部断语（带编号；出处留在网页，核对时点句子可见）连同写作规矩复制下来；② 粘贴到你常用的 AI（Claude、DeepSeek 等）；③ 把 AI 写好的解读粘回下面的框，点“核对出处”，没标编号或编号不存在的句子会标红。</p>
+    <label class="ai-tip">解读字数：<select id="ai-len">
+      <option value="300">约300字</option><option value="500">约500字</option><option value="800" selected>约800字</option>
+      <option value="1500">约1500字</option><option value="0">不限</option></select></label>
     <button class="ai-btn" onclick="copyAiPacket()">复制给 AI</button>
     <span id="ai-copy-msg"></span>
     <textarea id="ai-packet" readonly hidden></textarea>
@@ -3068,7 +3071,7 @@ function buildAiPacket() {
     const ps = stars[br] || {}, code = pn[0];
     let n = 0; const lines = [];
     const add = (text, src) => { text = strip(text); if (!text) return; const id = code + (++n);
-      items[id] = { palace: pn, text, src }; lines.push('[' + id + '] ' + text + '（出处：' + src + '）'); };
+      items[id] = { palace: pn, text, src }; lines.push('[' + id + '] ' + text); }; // 出处只留在 items，核对时显示
     const er = _engineResults && _engineResults[pn];
     if (er && er.items) for (const it of er.items) add(it.text, it.src || '规则引擎');
     if (pn === '命宫' && _engineResults) {
@@ -3114,12 +3117,16 @@ function buildAiPacket() {
   }
   _aiItems = items;
   const sex = _chartState.gender === 'male' ? '男' : '女';
+  const lenEl = document.getElementById('ai-len'), len = lenEl ? Number(lenEl.value) : 800;
   return '请你根据下面这张紫微斗数命盘的断语，写一篇整盘综合解读。必须遵守以下规矩：\n' +
     '1. 只能使用下面列出的编号断语，不得加入任何断语以外的命理知识、推断或你自己的看法。你只负责把这些断语用通顺的话连接、归纳起来。\n' +
     '2. 每一句话的句末都必须用方括号标出它依据的编号，例如 [命3]，依据多条就写 [命3][财2]。没有编号依据的话一律不要写。\n' +
     '3. 不同书说法不一致时，两说并存，分别标编号，不要替书下结论，也不要说哪本书对。\n' +
     '4. 某方面断语里没有的，就写“书中断语未涉及”，不要补充。\n' +
-    '5. 按“总论、性格、事业、财运、婚姻、子女、健康、六亲、其他”分段，没有断语的段落省略。用简体中文。\n\n' +
+    '5. 按“总论、性格、事业、财运、婚姻、子女、健康、六亲、其他”分段，没有断语的段落省略。用简体中文。\n' +
+    '6. 断语后的括号数字表示有几本书这么说，例如 聪明(3) 即三本书同说；没有数字的只有一本书说。\n' +
+    (len ? '7. 全文控制在约' + len + '字（上下不超过一成，编号不计字数）。不要逐条转述，要归纳：意思相同或相近的断语合成一句，句末把这些编号都标上；' +
+      '字数不够时，优先写书数多的、各宫主要的断语，次要的可以省略，省略不算违规。\n' : '') + '\n' +
     '命主：' + sex + '命\n\n' + sections.join('\n\n');
 }
 async function copyAiPacket() {
