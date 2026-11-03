@@ -107,6 +107,8 @@
       hour: data.hourBrIdx,
       nayin: (data.baZi && data.baZi.yearNaYin) || '', // 年柱纳音，如"涧下水"
       lday: data.lunarDay, lmonth: data.lunarMonth, leap: !!data.lunarLeap, // 农历日、月（太阴上弦下弦等）
+      pstem: data.palaceStemMap || {}, // 各宫宫干（地支索引→天干），宫干条件用（不是生年干）
+      data,
     };
   }
 
@@ -152,6 +154,17 @@
     if ((mm = atom.match(/^夹全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.jia, s));
     // 本宫主星有X（他宫规则表每条的前提）；同时记下该星，供庙旺/陷判断
     if ((mm = atom.match(/^星=(.+)$/))) { F.star = mm[1]; return F.at(F.ming).includes(mm[1]); }
+    // 宫干（乙部分定案）：宫干:疾厄=丁 —— 某宫的宫干，不是生年干
+    if ((mm = atom.match(/^宫干:(.+?)=(.+)$/))) return mm[2].split('/').includes(F.pstem[palAt(F, mm[1])]);
+    // 别宫条件（乙部分定案）：他:目标:条件 —— 目标是宫名（命宫、财帛……）或星名（天相、太阳……，取该星所在宫），
+    // 以目标宫为"本宫"求条件（夹＝目标宫左右邻宫，会＝目标宫三方四正，同宫＝目标宫）
+    if ((mm = atom.match(/^他:([^:]+):(.+)$/))) {
+      const idx = otherIdx(F, mm[1]);
+      if (idx < 0) return false;
+      const G = extractFacts(F.data, idx, mm[1]);
+      if (MAIN14.includes(mm[1])) G.star = mm[1];
+      return evalAtom(G, mm[2]);
+    }
     if ((mm = atom.match(/^宫无:(.+?)=(.+)$/))) return !expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
     if ((mm = atom.match(/^对宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, [F.sf[3]], F.sihua[h]));
     if ((mm = atom.match(/^宫:(.+?)=(.+)$/))) return expand(mm[2].split('/')).some(s => inPalaces(F, [palAt(F, mm[1])], s));
@@ -213,6 +226,12 @@
     const m = F.realMing === undefined ? F.ming : F.realMing;
     return (((m - PALACE_IDX[name]) % 12) + 12) % 12;
   };
+  // 别宫目标：宫名按真命宫推；星名取该星所在宫（找不到返回 -1）
+  const otherIdx = (F, t) => {
+    if (t in PALACE_IDX) return palAt(F, t);
+    for (let i = 0; i < 12; i++) if (F.at(i).includes(t)) return i;
+    return -1;
+  };
   // 他宫规则表：每条规则以"星=X"开头，不需要另给主星
   function matchPalace(rules, F) {
     return rules.filter(r => r.cond.every(a => evalAtom(F, a)));
@@ -235,6 +254,8 @@
     const part = cond.filter(a => !/^星=/.test(a)).map(a => {
       let m;
       if (/^支=/.test(a))   return P ? F.star + '在' + P + '·' + F.branch : (F.star || '紫微') + '在' + F.branch;
+      if ((m = a.match(/^宫干:(.+?)=(.+)/))) return m[1] + '宫宫干为' + F.pstem[palAt(F, m[1])] + '（宫干，非生年干）';
+      if ((m = a.match(/^他:([^:]+):(.+)/))) { const i = otherIdx(F, m[1]); return i < 0 ? a : m[1] + (m[1] in PALACE_IDX ? '' : '（在' + BR[i] + '）') + '：' + label(extractFacts(F.data, i, m[1] in PALACE_IDX ? m[1] : m[1] + '所在宫'), [m[2]]); }
       if ((m = a.match(/^宫无:(.+?)=(.+)/))) return m[1] + '宫无' + expand(m[2].split('/')).slice(0, 4).join('、') + (expand(m[2].split('/')).length > 4 ? '等' : '');
       if ((m = a.match(/^对宫化:(.+)/))) return '对宫有化' + m[1];
       if (a === '六吉对星') return '六吉成对会照';
