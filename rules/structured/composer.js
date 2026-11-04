@@ -82,12 +82,16 @@
     return rules;
   }
   function parseSynonyms(text) {
+    // "[主题:健康,福寿]" 起，以下各行只用于这些主题的结论；"[主题:全部]" 恢复为不分主题
     const map = {}, opposed = [];
+    let scope = null;
     for (const line of (text || '').split(/\r?\n/)) {
       if (/^#/.test(line) || !line.trim()) continue;
       let m;
+      if ((m = line.match(/^\[主题:(.+)\]\s*$/))) { scope = m[1].trim() === '全部' ? null : m[1].split(/[,，、]/).map(x => x.trim()); continue; }
       if ((m = line.match(/^!相反\s+(.+?)\s*<>\s*(.+)$/))) { opposed.push([m[1].trim(), m[2].trim()]); continue; }
-      if ((m = line.match(/^(.+?)\s*=\s*(.+)$/))) for (const v of m[2].split('／')) map[v.trim()] = m[1].trim();
+      if ((m = line.match(/^(.+?)\s*=\s*(.+)$/))) for (const v of m[2].split('／'))
+        for (const tp of (scope || [''])) map[(tp ? tp + '|' : '') + v.trim()] = m[1].trim();
     }
     return { map, opposed };
   }
@@ -318,12 +322,13 @@
     // （"主有寿"与"有寿"、"横发横破"与"主横发横破"算同一句）；"易／可／必／多"等表程度的字不去，显示用最先出现的说法
     const bare = t => t.replace(/^(亦主|亦|主)(?=.)/, '').replace(/[，、]/g, '');
     const firstSay = new Map();
-    const canon = t => { if (syn.map[t]) return syn.map[t]; const b = syn.map[bare(t)] || bare(t);
+    const canon = (t, tp) => { const hit = syn.map[tp + '|' + t] || syn.map[t]; if (hit) return hit;
+      const b = syn.map[tp + '|' + bare(t)] || syn.map[bare(t)] || bare(t);
       if (!firstSay.has(b)) firstSay.set(b, t); return firstSay.get(b); };
     const entries = new Map();
     for (const r of hits) for (const it of r.items) {
       // 不同书把同一结论归在不同主题时只列一次，主题取条件最少的那条规则
-      const k = canon(it.text);
+      const k = canon(it.text, it.topic);
       if (!entries.has(k)) entries.set(k, { topic: it.topic, n: r.cond.length, text: k, rules: [] });
       const e = entries.get(k);
       if (r.cond.length < e.n) { e.topic = it.topic; e.n = r.cond.length; }
@@ -334,7 +339,7 @@
     // 结论顺序：先按最早的无条件规则排（各盘通论顺序一致），再按最早出现的规则
     const pos = new Map(hits.map((r, i) => [r, i]));
     // 同一条规则里的几条结论按原文先后
-    const at = (r, t) => pos.get(r) * 1000 + Math.max(0, r.items.findIndex(it => canon(it.text) === t));
+    const at = (r, t) => pos.get(r) * 1000 + Math.max(0, r.items.findIndex(it => canon(it.text, it.topic) === t));
     const key = e => { const g = e.rules.filter(r => !r.cond.length).map(r => at(r, e.text));
       return [g.length ? Math.min(...g) : Infinity, Math.min(...e.rules.map(r => at(r, e.text)))]; };
     const all = [...entries.values()].map(e => [key(e), e])
