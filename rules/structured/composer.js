@@ -73,7 +73,7 @@
     for (const line of text.split(/\r?\n/)) {
       if (!/^[A-Z]\d+[a-z]*\|/.test(line)) continue;
       const [id, cond, topic, concl, quote, src] = line.split('|');
-      const items = concl.split('／').map(c => {
+      const items = concl.split('／').filter(Boolean).map(c => {
         const m = c.match(TOPIC_RE);
         return m ? { topic: m[1], text: m[2] } : { topic, text: c };
       });
