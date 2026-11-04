@@ -73,7 +73,7 @@
     for (const line of text.split(/\r?\n/)) {
       if (!/^[A-Z]\d+[a-z]*\|/.test(line)) continue;
       const [id, cond, topic, concl, quote, src] = line.split('|');
-      const items = concl.split('／').map(c => {
+      const items = concl.split('／').filter(Boolean).map(c => {
         const m = c.match(TOPIC_RE);
         return m ? { topic: m[1], text: m[2] } : { topic, text: c };
       });
@@ -82,12 +82,16 @@
     return rules;
   }
   function parseSynonyms(text) {
+    // "[主题:健康,福寿]" 起，以下各行只用于这些主题的结论；"[主题:全部]" 恢复为不分主题
     const map = {}, opposed = [];
+    let scope = null;
     for (const line of (text || '').split(/\r?\n/)) {
       if (/^#/.test(line) || !line.trim()) continue;
       let m;
+      if ((m = line.match(/^\[主题:(.+)\]\s*$/))) { scope = m[1].trim() === '全部' ? null : m[1].split(/[,，、]/).map(x => x.trim()); continue; }
       if ((m = line.match(/^!相反\s+(.+?)\s*<>\s*(.+)$/))) { opposed.push([m[1].trim(), m[2].trim()]); continue; }
-      if ((m = line.match(/^(.+?)\s*=\s*(.+)$/))) for (const v of m[2].split('／')) map[v.trim()] = m[1].trim();
+      if ((m = line.match(/^(.+?)\s*=\s*(.+)$/))) for (const v of m[2].split('／'))
+        for (const tp of (scope || [''])) map[(tp ? tp + '|' : '') + v.trim()] = m[1].trim();
     }
     return { map, opposed };
   }
@@ -314,20 +318,28 @@
   // 同一结论（含同义）跨书合并并列出全部来源；同一主题内按条件分组，通论在前
   function compose(hits, F, syn) {
     syn = syn || { map: {}, opposed: [] };
-    const canon = t => syn.map[t] || t;
+    // 同义归并：先查同义表；表里没有的，只做两种不改原意的比对——去掉句首"主／亦／亦主"、不计句中逗号顿号
+    // （"主有寿"与"有寿"、"横发横破"与"主横发横破"算同一句）；"易／可／必／多"等表程度的字不去，显示用最先出现的说法
+    const bare = t => t.replace(/^(亦主|亦|主)(?=.)/, '').replace(/[，、]/g, '');
+    const firstSay = new Map();
+    const canon = (t, tp) => { const hit = syn.map[tp + '|' + t] || syn.map[t]; if (hit) return hit;
+      const b = syn.map[tp + '|' + bare(t)] || syn.map[bare(t)] || bare(t);
+      if (!firstSay.has(b)) firstSay.set(b, t); return firstSay.get(b); };
     const entries = new Map();
     for (const r of hits) for (const it of r.items) {
       // 不同书把同一结论归在不同主题时只列一次，主题取条件最少的那条规则
-      const k = canon(it.text);
+      const k = canon(it.text, it.topic);
       if (!entries.has(k)) entries.set(k, { topic: it.topic, n: r.cond.length, text: k, rules: [] });
       const e = entries.get(k);
       if (r.cond.length < e.n) { e.topic = it.topic; e.n = r.cond.length; }
       e.rules.push(r);
+      // 同义归并后只显示统一说法，书中原话留着，网页点开可见
+      if (it.text !== k) (e.orig = e.orig || new Set()).add(it.text);
     }
     // 结论顺序：先按最早的无条件规则排（各盘通论顺序一致），再按最早出现的规则
     const pos = new Map(hits.map((r, i) => [r, i]));
     // 同一条规则里的几条结论按原文先后
-    const at = (r, t) => pos.get(r) * 1000 + Math.max(0, r.items.findIndex(it => canon(it.text) === t));
+    const at = (r, t) => pos.get(r) * 1000 + Math.max(0, r.items.findIndex(it => canon(it.text, it.topic) === t));
     const key = e => { const g = e.rules.filter(r => !r.cond.length).map(r => at(r, e.text));
       return [g.length ? Math.min(...g) : Infinity, Math.min(...e.rules.map(r => at(r, e.text)))]; };
     const all = [...entries.values()].map(e => [key(e), e])
@@ -360,8 +372,10 @@
         for (const seg of segs) {
           const [lb, g0] = seg[0];
           const dup = segs.length > 1 && seg !== segs[0];
-          const it = { text: e.text, dup, note: e.note,
-            srcText: [sset(g0.rules), ...seg.slice(1).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
+          // cnt：说这句话的书有几本（同书不同卷、不同节只算一本）；通论条把条件组里的书也算上
+          const cnt = new Set((dup ? seg : parts).flatMap(([, g]) => g.rules.map(r => (String(r.src).match(/《[^》]+》/) || [r.src])[0]))).size;
+          const it = { text: e.text, dup, note: e.note, cnt, orig: e.orig ? [...e.orig] : null,
+            srcText: [sset(g0.rules), ...(segs.length > 1 && !dup ? segs[1] : seg.slice(1)).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
           if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
           groups.get(lb).items.push(it);
         }
@@ -375,10 +389,13 @@
         paras.push({ cond: lb, general: g.n === 0,
           segs: [...bySrc.entries()].map(([src, list]) => ({ src, items: list })) });
       }
-      const flat = e => e.text + (e.dup ? '（通论亦有）' : '') + (e.note || '');
+      // 纯文字版（交给AI）：通论已有的说法不再在条件组重复；几本书同说的，句后标(本数)，如 聪明(3)
+      const flat = e => e.text + (e.cnt > 1 ? '(' + e.cnt + ')' : '') + (e.note || '');
       const general = [], lines = [];
       for (const pa of paras) {
-        const body = pa.segs.map(sg => sg.items.map(flat).join('、') + '〔' + sg.src + '〕').join('；') + '。';
+        const segs = pa.segs.map(sg => ({ src: sg.src, items: sg.items.filter(e => !e.dup) })).filter(sg => sg.items.length);
+        if (!segs.length) continue;
+        const body = segs.map(sg => sg.items.map(flat).join('、') + '〔' + sg.src + '〕').join('；') + '。';
         (pa.general ? general : lines).push(pa.cond + '：' + body);
       }
       out.push({ topic, general, lines, paras });
@@ -395,7 +412,8 @@
     const body = pa.segs.map(sg => {
       const extra = sg.items.filter(e => e.dup).length ? '；凡' + star + '坐命，通论亦有此说' : '';
       const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
-      return '<span class="rc-fold rc-src"' + tipAttr('出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
+      const origs = sg.items.filter(e => e.orig).map(e => e.text + '＝' + e.orig.join('、')).join('；');
+      return '<span class="rc-fold rc-src"' + tipAttr((origs ? '书中原话：' + origs + '。' : '') + '出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
         sg.items.map(e => esc(e.text)).join('、') + '</span>';
     }).join('；');
     const cond = '条件：' + (pa.general ? '凡' + star + '坐命皆是（通论）' : pa.cond) +
