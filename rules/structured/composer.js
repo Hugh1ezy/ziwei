@@ -355,16 +355,15 @@
         }
         const parts = [...byLb.entries()].sort((a, b) => a[1].n - b[1].n);
         const sset = rs => [...new Set(rs.map(r => r.src))].join('、');
-        // 通论（无附加条件）各盘相同，单独成条；有条件的说法另合一条
-        const segs = parts[0][1].n === 0 && parts.length > 1 ? [parts.slice(0, 1), parts.slice(1)] : [parts];
-        for (const seg of segs) {
-          const [lb, g0] = seg[0];
-          const dup = segs.length > 1 && seg !== segs[0];
-          const it = { text: e.text, dup, note: e.note,
-            srcText: [sset(g0.rules), ...seg.slice(1).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
-          if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
-          groups.get(lb).items.push(it);
-        }
+        // 同一句话通论（无附加条件）和有条件的规则都有：只列在有条件的一组（本盘自己的），不再在通论重复；
+        // 通论的出处记在 genSrc，点开出处时注明（用户 2026-11-11 定）
+        const dup = parts[0][1].n === 0 && parts.length > 1;
+        const seg = dup ? parts.slice(1) : parts;
+        const [lb, g0] = seg[0];
+        const it = { text: e.text, dup, genSrc: dup ? sset(parts[0][1].rules) : '', note: e.note,
+          srcText: [sset(g0.rules), ...seg.slice(1).map(([l, g]) => sset(g.rules) + '（' + l + '时）')].join('；') };
+        if (!groups.has(lb)) groups.set(lb, { n: g0.n, items: [] });
+        groups.get(lb).items.push(it);
       }
       // paras：结构化结果（网页用，来源和条件可折叠）；general/lines：同内容的纯文字版
       const paras = [];
@@ -375,7 +374,7 @@
         paras.push({ cond: lb, general: g.n === 0,
           segs: [...bySrc.entries()].map(([src, list]) => ({ src, items: list })) });
       }
-      const flat = e => e.text + (e.dup ? '（通论亦有）' : '') + (e.note || '');
+      const flat = e => e.text + (e.note || '');
       const general = [], lines = [];
       for (const pa of paras) {
         const body = pa.segs.map(sg => sg.items.map(flat).join('、') + '〔' + sg.src + '〕').join('；') + '。';
@@ -393,12 +392,13 @@
   const tipAttr = tip => ' tabindex="0" role="button" data-tip="' + esc(tip) + '"';
   function paraHTML(pa, hint, star) {
     const body = pa.segs.map(sg => {
-      const extra = sg.items.filter(e => e.dup).length ? '；凡' + star + '坐命，通论亦有此说' : '';
+      const gs = [...new Set(sg.items.filter(e => e.dup).map(e => e.genSrc))].join('、');
+      const extra = gs ? '；凡' + star + '坐命皆有此说（' + gs + '）' : '';
       const notes = sg.items.filter(e => e.note).map(e => e.text + e.note).join('；');
       return '<span class="rc-fold rc-src"' + tipAttr('出处：' + sg.src + extra + (notes ? '。' + notes : '')) + '>' +
         sg.items.map(e => esc(e.text)).join('、') + '</span>';
     }).join('；');
-    const cond = '条件：' + (pa.general ? '凡' + star + '坐命皆是（通论）' : pa.cond) +
+    const cond = '条件：' + (pa.general ? '凡' + star + '坐命皆是' : pa.cond) +
       (hint && /百官|左辅、右弼/.test(pa.cond) ? '。' + hint : '');
     return '<p class="rc-para"><span class="rc-fold rc-cond"' + tipAttr(cond) + '>·</span>' + body + '。</p>';
   }
