@@ -2892,7 +2892,7 @@ function renderStructured(star) {
   const gen = RuleComposer.renderHTML(comp, { only: 'general' });
   const lines = RuleComposer.renderHTML(comp, { only: 'lines' });
   return '<div class="rc-box">' + lines +
-    (gen ? '<details class="rc-gen"><summary>凡' + star + '坐命都适用的通论</summary>' + gen + '</details>' : '') + '</div>';
+    (gen ? '<details class="rc-gen"><summary>' + star + '坐命（凡' + star + '坐命都适用）</summary>' + gen + '</details>' : '') + '</div>';
 }
 // 点短语下的虚线看出处，点段首"·"看条件
 (function initRcTip() {
@@ -3085,7 +3085,7 @@ function buildAiPacket() {
       const tag = main.join('') + (borrowed ? '（借对宫）' : '') + '在' + pn;
       const srcOf = l => ((l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || pn + '宫规则表') + '·' + tag;
       for (const t of comp) {
-        for (const l of (t.general || [])) add(t.topic + '·' + tag + '通论·' + l.replace(/〔[^〕]*〕/g, ''), srcOf(l));
+        for (const l of (t.general || [])) add(t.topic + '·凡' + tag + '·' + l.replace(/^通论：/, '').replace(/〔[^〕]*〕/g, ''), srcOf(l));
         for (const l of (t.lines || [])) add(t.topic + '·' + l.replace(/〔[^〕]*〕/g, ''), srcOf(l));
       }
       main = [];
@@ -3097,7 +3097,7 @@ function buildAiPacket() {
         const comp = hits.length ? RuleComposer.compose(hits, F, _structCache.__syn) : [];
         for (const t of comp) {
           for (const l of (t.lines || [])) add(t.topic + '·' + l.replace(/〔[^〕]*〕/g, ''), (l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || star + '坐命规则表');
-          for (const l of (t.general || [])) add(t.topic + '·' + star + '坐命通论·' + l.replace(/〔[^〕]*〕/g, ''), (l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || star + '坐命规则表');
+          for (const l of (t.general || [])) add(t.topic + '·凡' + star + '坐命·' + l.replace(/^通论：/, '').replace(/〔[^〕]*〕/g, ''), (l.match(/〔([^〕]*)〕/g) || []).map(x => x.slice(1, -1)).join('；') || star + '坐命规则表');
         }
         continue;
       }
