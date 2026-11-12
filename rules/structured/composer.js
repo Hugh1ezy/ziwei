@@ -177,6 +177,18 @@
     if ((mm = atom.match(/^会化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.sf, F.sihua[h]));
     // 邻宫有生年化X之星（天相"财荫夹印""刑忌夹印"）
     if ((mm = atom.match(/^夹化:(.+)$/)))   return mm[1].split('/').some(h => F.sihua[h] && inPalaces(F, F.jia, F.sihua[h]));
+    // 各宫总论、其它星（己部分）：以真实本宫为准（本宫无主星借对宫时，同宫/支仍按真实本宫）
+    // 总论：不论主星，凡此宫都适用；无主星：真实本宫没有十四主星（辅星独守）
+    if (atom === '总论') return true;
+    // 宫吉:X／宫不吉:X —— 丙部分定案"别宫吉"＝该宫本宫有六吉之一且无四煞，"不吉"反之；X 为宫名或"身宫"
+    if ((mm = atom.match(/^宫(不?)吉:(.+)$/))) { const i = otherIdx(F, mm[2]);
+      const ok = i >= 0 && LIUJI.some(s => F.at(i).includes(s)) && !SISHA.some(s => F.at(i).includes(s)); return mm[1] ? !ok : ok; }
+    // 主星庙旺：本宫主星（借对宫时按对宫主星）都在庙旺；主星陷：其中有落陷者（总论"宫旺""失陷"用，己部分读法）
+    if (atom === '主星庙旺' || atom === '主星陷') { const ms = MAIN14.filter(s => F.at(F.ming).includes(s));
+      return atom === '主星庙旺' ? ms.length > 0 && ms.every(s => MIAO[s]['庙旺'].includes(F.branch)) : ms.some(s => MIAO[s]['陷'].includes(F.branch)); }
+    if (atom === '无主星') return !MAIN14.some(s => F.at(palAt(F, F.pal)).includes(s));
+    if ((mm = atom.match(/^本支=(.+)$/))) return mm[1].split('/').includes(BR[palAt(F, F.pal)]);
+    if ((mm = atom.match(/^本宫化:(.+)$/))) return mm[1].split('/').some(h => F.sihua[h] && F.at(palAt(F, F.pal)).includes(F.sihua[h]));
     // 身宫就在本宫（迁移宫表太阴"若身宫在此"）
     if (atom === '身宫在本宫') return F.shen === F.ming;
     switch (atom) {
@@ -279,6 +291,12 @@
       if (/^月=/.test(a))   return '农历' + F.lmonth + '月生';
       if ((m = a.match(/^命迁无:(.+)/))) return '命宫、迁移宫无' + list(m[1]);
       if ((m = a.match(/^命迁:(.+)/)))  return '命宫、迁移宫有' + expand(m[1].split('/')).filter(s => inPalaces(F, [F.ming, F.sf[3]], s)).join('、');
+      if ((m = a.match(/^宫(不?)吉:(.+)/))) return m[2].replace(/宫$/, '') + '宫' + (m[1] ? '不吉（无六吉或有四煞）' : '吉（有六吉无四煞）');
+      if (a === '总论') return (P || '命宫').replace(/宫$/, '') + '宫总论（不论主星）';
+      if (a === '主星庙旺' || a === '主星陷') return MAIN14.filter(s => F.at(F.ming).includes(s)).join('') + (a === '主星陷' ? '落陷' : '庙旺') + '（' + (P || '命宫') + '主星）';
+      if (a === '无主星') return (P || '命宫').replace(/宫$/, '') + '宫无主星';
+      if (/^本支=/.test(a)) return (P || '命宫').replace(/宫$/, '') + '宫在' + BR[palAt(F, F.pal)];
+      if ((m = a.match(/^本宫化:(.+)/))) return (P || '命宫').replace(/宫$/, '') + '宫有' + m[1].split('/').filter(h => F.sihua[h] && F.at(palAt(F, F.pal)).includes(F.sihua[h])).map(h => F.sihua[h] + '化' + h).join('、');
       if (a === '身宫在本宫') return '身宫在' + (P || '命宫');
       if ((m = a.match(/^不同宫:(.+)/))) return (P || '命宫') + '无' + list(m[1]);
       if ((m = a.match(/^同宫:(.+)/))) return expand(m[1].split('/')).filter(s => F.at(F.ming).includes(s)).join('、') + '同宫';
