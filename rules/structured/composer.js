@@ -158,6 +158,7 @@
     if ((mm = atom.match(/^对宫:(.+)$/)))   return expand(mm[1].split('/')).some(s => inPalaces(F, [F.sf[3]], s));
     if ((mm = atom.match(/^会全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.sf, s));
     if ((mm = atom.match(/^夹全:(.+)$/)))   return expand(mm[1].split('/')).every(s => inPalaces(F, F.jia, s));
+    if ((mm = atom.match(/^对宫全:(.+)$/))) return expand(mm[1].split('/')).every(s => inPalaces(F, [F.sf[3]], s));
     // 本宫主星有X（他宫规则表每条的前提）；同时记下该星，供庙旺/陷判断
     if ((mm = atom.match(/^星=(.+)$/))) { F.star = mm[1]; return F.at(F.ming).includes(mm[1]); }
     // 宫干（乙部分定案）：宫干:疾厄=丁 —— 某宫的宫干，不是生年干
@@ -294,6 +295,7 @@
       if ((m = a.match(/^身宫有:(.+)/))) return '身宫有' + m[1];
       if ((m = a.match(/^对宫:(.+)/)))   return '对宫有' + expand(m[1].split('/')).filter(s => inPalaces(F, [F.sf[3]], s)).join('、');
       if ((m = a.match(/^会全:(.+)/)))   return '三方四正' + list(m[1]) + '会齐';
+      if ((m = a.match(/^对宫全:(.+)/))) return '对宫' + list(m[1]) + '都在';
       if ((m = a.match(/^夹全:(.+)/)))   return list(m[1]) + (P ? '夹' + P : '夹命');
       if ((m = a.match(/^宫:(.+?)=(.+)/))) return m[1] + '宫有' + expand(m[2].split('/')).filter(s => inPalaces(F, [palAt(F, m[1])], s)).join('、');
       if ((m = a.match(/^化:(.+)=(.+)/))) { const h = m[2].split('/').find(h => m[1].split('/').includes(F.sihua[h])); return F.sihua[h] + '化' + h; }
