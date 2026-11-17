@@ -12,6 +12,7 @@
 <script src="rules/rules_engine.js"></script>
 <!-- 条件＋结论 结构化解读（试点：紫微在命宫），规则表见 rules/structured/ -->
 <script src="rules/structured/composer.js"></script>
+<script src="rules/dedup/dedup.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -382,6 +383,20 @@ button#calcBtn:hover { background: #b22222; }
 #cs-tip[hidden] { display: none; }
 .rc-gen, .rc-raw { margin-top: 10px; font-size: 0.95em; }
 .rc-gen summary, .rc-raw summary { cursor: pointer; color: #7a746b; font-size: 0.9em; }
+/* 去重后的书中断语（各宫）：前文在上，“X坐命”折叠栏在下；点句子看说明，出处收在第二层 */
+.dd-box { font-size: 1.02em; line-height: 1.9; margin-bottom: 14px; }
+.dd-box h4 { font-size: 0.82em; font-weight: bold; letter-spacing: .2em; color: #8b1a1a; margin: 10px 0 2px; }
+.dd-box p { margin: 0 0 6px; }
+.dd-it { text-decoration: underline dotted #9a9184; text-underline-offset: .3em; cursor: pointer; }
+.dd-it:focus-visible, .dd-cd:focus-visible { outline: 2px solid #8b1a1a; outline-offset: 2px; }
+.dd-cd { color: #8b1a1a; cursor: pointer; padding: 0 6px 0 0; font-weight: bold; }
+.dd-xn { color: #9a9184; font-size: 0.72em; margin-left: 2px; }
+.dd-box details { margin-top: 6px; } .dd-box summary { cursor: pointer; color: #7a746b; font-size: 0.9em; }
+.dd-wait { color: #7a746b; font-size: 0.9em; }
+#dd-tip { position: absolute; z-index: 1000; max-width: min(26rem, calc(100vw - 32px)); background: #2b2824; color: #f5f1ea; font-size: 13px; line-height: 1.7; padding: 8px 12px; border-radius: 5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#dd-tip[hidden] { display: none; }
+#dd-tip .sb { font: inherit; font-size: 12px; background: none; border: 1px solid currentColor; color: inherit; opacity: .75; border-radius: 3px; padding: 0 5px; margin-left: 4px; cursor: pointer; }
+#dd-tip .sub { margin: 4px 0 4px 10px; padding-left: 8px; border-left: 2px solid currentColor; opacity: .85; font-size: 12px; }
 #r2-content {
   font-size: 0.88em;
   line-height: 1.8;
@@ -1773,8 +1788,9 @@ function updateBottomNavDaXian(n) {
 }
 
 let _lastChartData = null; // 结构化解读用
+let _dedupData = null, _dedupSecs = null; // 各宫断语去重
 function renderChart(data) {
-  _lastChartData = data;
+  _lastChartData = data; _dedupSecs = null;
   const {
     y,m,d,lunarYear,lunarMonth,lunarDay,lunarLeap,
     yearStem,yearBr,ju,
@@ -2919,6 +2935,48 @@ function renderStructured(star) {
     if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(f); } if (e.key === 'Escape') hide(); });
 })();
 
+// ===== 各宫断语去重（rules/dedup/dedup.js；数据 rules/dedup/data/<组>.json）=====
+async function loadDedupData() {
+  if (_dedupData || typeof Dedup === 'undefined') return;
+  try { const D = {}; await Promise.all(Dedup.GROUPS.map(async g => { D[g] = await (await fetch('rules/dedup/data/' + g + '.json')).json(); })); _dedupData = D; }
+  catch (e) { console.warn('去重数据加载失败:', e); }
+}
+function computeDedup() {
+  _dedupSecs = null;
+  if (!_dedupData || !_lastChartData || typeof RuleComposer === 'undefined') return;
+  try { _dedupSecs = Dedup.computeAll(RuleComposer, _dedupData, _lastChartData); } catch (e) { console.warn('去重计算失败:', e); }
+}
+function dedupSecOf(pn) { if (!_dedupSecs && _dedupData) computeDedup(); return _dedupSecs ? _dedupSecs.find(s => s.pal === pn || s.pal === pn + '宫') : null; }
+function renderDedupPalace(pn) {
+  const s = dedupSecOf(pn); if (!s) return '';
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const it = e => '<span class="dd-it" tabindex="0" role="button" data-ddtip="' + esc(e.tip) + '">' + esc(e.t) + '</span>' + (e.x > 1 ? '<small class="dd-xn">×' + e.x + '</small>' : '');
+  const body = s.topics.map(t => '<h4>' + esc(t.topic) + '</h4>' +
+    t.L.map(pa => '<p><span class="dd-cd" tabindex="0" role="button" data-ddtip="' + esc('条件：' + pa.c) + '">·</span>' + pa.segs.map(sg => sg.map(it).join('、')).join('；') + '。</p>').join('') +
+    (t.G.length ? '<details><summary>' + esc(s.tag) + '（凡' + esc(s.tag) + '都适用）</summary>' + t.G.map(p => '<p>' + p.map(b => b.map(it).join('、')).join('；') + '。</p>').join('') + '</details>' : '')).join('');
+  return '<div class="r2-section"><div class="r2-section-title">' + esc(s.pal) + ' — 书中断语（各书去重后）<small style="font-weight:normal;color:#7a746b">　' + esc(s.tag) + '</small></div><div class="dd-box">' + body + '</div></div>';
+}
+(function initDedupTip() {
+  let tip = null, cur = null;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const sb = (t, n) => ' <button class="sb" type="button" aria-expanded="false">' + (n || '出处') + '</button><div class="sub" hidden>' + esc(t) + '</div>';
+  const lay = txt => txt.split('\n').map(l => { let m = l.match(/^出处：(.*)$/); if (m) return '<div>' + sb(m[1], '本条出处').trim() + '</div>';
+    m = l.match(/^(已含：.+?)（(.*)）$/); if (m) return '<div>' + esc(m[1]) + sb(m[2]) + '</div>'; return '<div>' + esc(l) + '</div>'; }).join('');
+  const hide = () => { if (tip) tip.hidden = true; cur = null; };
+  function open(el, ev) {
+    if (cur === el) { hide(); return; } cur = el;
+    if (!tip) { tip = document.createElement('div'); tip.id = 'dd-tip'; document.body.appendChild(tip);
+      tip.addEventListener('click', e => { const b = e.target.closest('.sb'); if (b) { const d = b.nextElementSibling; d.hidden = !d.hidden; b.setAttribute('aria-expanded', !d.hidden); } }); }
+    tip.innerHTML = lay(el.dataset.ddtip); tip.hidden = false;
+    let r = el.getBoundingClientRect(), cx = r.left;
+    if (ev && ev.clientX) { cx = ev.clientX; r = [...el.getClientRects()].find(q => ev.clientY >= q.top - 1 && ev.clientY <= q.bottom + 1) || r; }
+    const w = tip.offsetWidth; const x = Math.max(16, Math.min(cx + scrollX, document.documentElement.clientWidth - w - 16));
+    tip.style.left = x + 'px'; tip.style.top = (r.bottom + scrollY + 6) + 'px';
+  }
+  document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-ddtip]'); if (el) open(el, e); else if (!(e.target.closest && e.target.closest('#dd-tip'))) hide(); });
+  document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.ddtip) { e.preventDefault(); open(e.target); } if (e.key === 'Escape') hide(); });
+})();
+
 // 生成单个宫的解读 HTML
 function renderRule2Palace(branchIdx) {
   if (!_rule2State) return '<div class="r2-no-data">请先排盘</div>';
@@ -2929,6 +2987,8 @@ function renderRule2Palace(branchIdx) {
   const mainStars = palaceStars.main;
 
   let html = '';
+  // === 书中断语（各宫去重后，优先显示） ===
+  html += renderDedupPalace(palaceName);
 
   // === 规则引擎推理结果（优先显示） ===
   if (_engineResults && _engineResults[palaceName]) {
@@ -2989,8 +3049,9 @@ function renderRule2Palace(branchIdx) {
     const jiShaSuffix = jiShaHtml ? ` —— ${jiShaHtml}` : '';
     const gengNote = (star === '天同' && huaType === '忌') ? `<span style="color:#888;font-size:0.8em">${GENG_TIANXIANG_NOTE}</span>` : '';
     sec += `<div class="r2-section-title">${palaceName}（${brName}宫）— <span class="r2-star-label">${star}</span>${huaLabel}${gengNote}${mwLabel}${jiShaSuffix}</div>`;
-    const structured = (palaceName === '命宫' && !isOpp && STRUCTURED_RULES[star]) ? renderStructured(star) : null;
-    if (structured) {
+    const hasDD = !!dedupSecOf(palaceName);
+    const structured = hasDD ? (text ? '' : null) : ((palaceName === '命宫' && !isOpp && STRUCTURED_RULES[star]) ? renderStructured(star) : null);
+    if (structured !== null) {
       // 已结构化：只显示本盘成立的结论；原书全文收起备查
       const raw = text ? formatText(typeof filterRuleText === 'function' ? filterRuleText(text, targetBrIdx, stars, star) : text) : '';
       sec += structured + (raw ? `<details class="rc-raw"><summary>原书全文（《紫微斗数精成》，备查）</summary><div class="r2-text">${raw}</div></details>` : '');
@@ -3079,7 +3140,16 @@ function buildAiPacket() {
     if (!main.length) { tgt = (br + 6) % 12; main = (stars[tgt] && stars[tgt].main) || []; borrowed = true; }
     const shownMain = main; // 标题里显示的借对宫主星（下面结构化宫会清空 main）
     // 已结构化的宫：只给本盘条件成立的结论（同宫双星合在一张表里，一次匹配）
-    if (_palCache[pn] && _lastChartData) {
+    // 各宫去重后的书中断语（有就用它，不再另取原书全文）
+    const ds = dedupSecOf(pn);
+    if (ds) {
+      const so = e => ((e.tip.match(/出处：([^\n]*)/) || [])[1] || pn + '宫规则表');
+      for (const t of ds.topics) {
+        for (const pa of t.L) for (const sg of pa.segs) for (const e of sg) add(t.topic + '·' + e.t, so(e) + '（' + pa.c + '时）');
+        for (const q of t.G) for (const b of q) for (const e of b) add(t.topic + '·凡' + ds.tag + '·' + e.t, so(e));
+      }
+      main = [];
+    } else if (_palCache[pn] && _lastChartData) {
       const F = RuleComposer.extractFacts(_lastChartData, tgt, pn);
       const comp = RuleComposer.compose(RuleComposer.matchPalace(_palCache[pn], F), F, _structCache.__syn);
       const tag = main.join('') + (borrowed ? '（借对宫）' : '') + '在' + pn;
@@ -3178,6 +3248,7 @@ async function toggleRule2Panel() {
       }
     }
     await loadStructuredRules();
+    await loadDedupData();
     _aiItems = null;
     initRule2Tabs();
     selectRule2Tab(0); // 默认显示命宫
